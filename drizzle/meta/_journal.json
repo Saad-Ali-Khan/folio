@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1793254384526,
+      "tag": "0000_married_blink",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793455541863,
+      "tag": "0001_serious_cargill",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793457676983,
+      "tag": "0002_empty_madripoor",
+      "breakpoints": true
+    }
+  ]
+}
