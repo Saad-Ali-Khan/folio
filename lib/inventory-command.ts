@@ -14,19 +14,26 @@ const MAX_QTY = 1_000_000;
 export function parseInventoryCommand(
   tokens: string[],
 ): InventoryCommand | null {
-  const [rawVerb, rawIdentifier, rawQty] = tokens;
+  const [rawVerb, ...rest] = tokens;
   const verb = rawVerb?.toUpperCase();
-  if (!verb || !rawIdentifier) return null;
+  if (!verb || rest.length === 0) return null;
 
   if (verb === "GET") {
-    return { verb, identifier: rawIdentifier, qty: null };
+    const identifier = rest.join(" ").trim();
+    if (!identifier) return null;
+    return { verb, identifier, qty: null };
   }
 
   if (verb !== "SET" && verb !== "ADD" && verb !== "SOLD") return null;
 
-  const qty = Number(rawQty);
+  // The quantity is the last token; the identifier may span the tokens in
+  // between so multi-word titles like "east of eden" work.
+  const qty = Number(rest.at(-1));
   if (!Number.isInteger(qty) || qty < 0 || qty > MAX_QTY) return null;
   if ((verb === "ADD" || verb === "SOLD") && qty < 1) return null;
 
-  return { verb, identifier: rawIdentifier, qty };
+  const identifier = rest.slice(0, -1).join(" ").trim();
+  if (!identifier) return null;
+
+  return { verb, identifier, qty };
 }

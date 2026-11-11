@@ -1,4 +1,5 @@
 import path from "node:path";
+import { eq, or, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import * as schema from "./schema";
 
@@ -42,4 +43,22 @@ const globalForDb = globalThis as unknown as { folioDb?: Promise<Database> };
 export function getDb(): Promise<Database> {
   globalForDb.folioDb ??= createDatabase().then((connection) => connection.db);
   return globalForDb.folioDb;
+}
+
+export async function findBookByIdentifier(
+  db: Database,
+  identifier: string,
+): Promise<schema.Book | undefined> {
+  const [book] = await db
+    .select()
+    .from(schema.books)
+    .where(
+      or(
+        eq(schema.books.slug, identifier.toLowerCase()),
+        eq(schema.books.isbn, identifier.replace(/[-\s]/g, "")),
+        sql`lower(${schema.books.title}) = ${identifier.toLowerCase()}`,
+      ),
+    )
+    .limit(1);
+  return book;
 }

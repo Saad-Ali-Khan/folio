@@ -122,6 +122,11 @@ Test card: `4242 4242 4242 4242`, any future expiry, any CVC.
 | `TELEGRAM_WEBHOOK_SECRET` | for Telegram | Must match the `secret_token` registered on the webhook.     |
 | `INVENTORY_TELEGRAM_CHAT_ID` | for Telegram | The only chat allowed to send commands (may be negative). |
 | `INVENTORY_TELEGRAM_PIN` | for Telegram | Shared PIN that must start every Telegram command.             |
+| `DISCORD_BOT_TOKEN`     | for Discord | Bot token; requires the Message Content intent.                   |
+| `DISCORD_CHANNEL_ID`    | for Discord | The only channel allowed to send commands.                        |
+| `INVENTORY_DISCORD_PIN` | for Discord | Shared PIN that must start every Discord command.                 |
+| `INVENTORY_DISCORD_SECRET` | for Discord | Shared secret between the bot process and the local route.     |
+| `INVENTORY_API_URL`     | no       | Where `bot:discord` reaches the app. Defaults to localhost:3000.  |
 | `NEXT_PUBLIC_APP_URL`   | no       | Base URL for Stripe redirects and Twilio signature validation.     |
 
 ## How checkout works
@@ -153,10 +158,11 @@ app/
   api/webhooks/stripe/route.ts  order capture and stock decrement
   api/sms/inventory/route.ts    authenticated Twilio inbound stock updates
   api/telegram/inventory/route.ts  authenticated Telegram bot stock updates
+  api/discord/inventory/route.ts   localhost-only stock updates for the Discord bot
 components/                     header, catalog, book cards, cart provider
 lib/db/                         Drizzle schema and client (Postgres or PGlite)
 lib/stripe.ts                   lazy Stripe client
-scripts/                        setup-db.ts, seed.ts, books.ts
+scripts/                        setup-db.ts, seed.ts, books.ts, discord-bot.ts
 drizzle/                        generated SQL migrations
 ```
 
@@ -178,6 +184,7 @@ account.
 | `npm run db:seed`    | Insert the sample catalog (idempotent)          |
 | `npm run db:studio`  | Drizzle Studio (needs `DATABASE_URL`)            |
 | `npm run books -- …` | List, add, or remove books (see below)           |
+| `npm run bot:discord`| Run the Discord inventory bot (loads `.env.local`) |
 
 ## Managing the catalog
 
@@ -258,7 +265,8 @@ signature, the sender's phone number, and a PIN in the message body.
    4821 GET dune         current stock
    ```
 
-   `dune` can be any book slug or ISBN. The webhook replies with the new level,
+   `dune` can be any book slug, ISBN, or title (multi-word titles work — the
+   command parser takes the last token as the quantity). The webhook replies with the new level,
    e.g. `OK dune: stock 20 (was 15).`, or a short error such as
    `No book matches "dune2".`
 
@@ -325,6 +333,18 @@ Commands, PIN, stock rules, and idempotency are identical to the SMS channel.
    4821 /set dune 20
    ```
 
+Typos and unknown titles no longer dead-end:
+
+- If the identifier is close to an existing book — even misspelled — the bot
+  replies with up to three numbered suggestions. Answer `yes` to apply your
+  command to the first one, a number to choose another, or `no` to cancel.
+  The offer expires after five minutes, and a new command replaces it.
+- `ADD` with no close match creates the book: metadata (title, author, ISBN,
+  cover) is pulled from Open Library, stock is set to the quantity you sent,
+  and price is left at $0.00 — set it afterwards with
+  `npm run books -- edit <slug> --price 9.99`. `SET`, `SOLD`, and `GET` never
+  create books.
+
 ### Security notes
 
 - Telegram does not sign webhooks the way Twilio does. Instead, `setWebhook`
@@ -342,6 +362,66 @@ Cloudflare Quick Tunnels are for testing: the URL changes on every restart and
 there is no uptime guarantee. For production, deploy the app or use a named
 Cloudflare Tunnel with a stable hostname.
 
+## Inventory by Discord (free)
+
+Discord is the free channel for networks where the Telegram API is blocked. The
+bot holds an **outbound** gateway connection to Discord, so no tunnel or public
+endpoint is needed. It forwards commands to a localhost-only route guarded by a
+shared secret.
+
+### Setup
+
+1. Create an application at
+   [discord.com/developers/applications](https://discord.com/developers/applications),
+   open **Bot**, and copy the token.
+2. Under **Bot → Privileged Gateway Intents**, enable **Message Content** —
+   without it messages arrive with empty content.
+3. Invite the bot to a private server: **OAuth2 → URL Generator**, scope `bot`,
+   permissions `Send Messages` and `Read Message History`.
+4. Enable Developer Mode in Discord, right-click the channel, and **Copy Channel
+   ID**.
+5. Add these to `.env` (a PIN and secret are already generated in `.env.local`):
+
+   ```text
+   DISCORD_BOT_TOKEN=
+   DISCORD_CHANNEL_ID=
+   INVENTORY_DISCORD_PIN=
+   INVENTORY_DISCORD_SECRET=
+   INVENTORY_API_URL=http://localhost:3000
+   ```
+
+6. Run both processes — the dev server first, then the bot:
+
+   ```bash
+   npm run dev
+   npm run bot:discord
+   ```
+
+7. Send commands in the allowlisted channel, prefixed with the PIN. The
+   identifier can be a slug, ISBN, or title — `east of eden` works as-is:
+
+   ```text
+   4821 SET dune 20
+   4821 ADD dune 5
+   4821 SOLD dune 2
+   4821 GET dune
+   4821 /get dune
+   ```
+
+### Security notes
+
+- `INVENTORY_DISCORD_SECRET` authenticates the bot process to the route; keep it
+  out of git and do not reuse it.
+- Only `DISCORD_CHANNEL_ID` gets replies; other channels are ignored silently.
+  The PIN is still required, so a member of the channel cannot change stock
+  without it.
+- Each message ID is recorded in `discord_commands` in the same transaction as
+  the stock change, so a repeated delivery cannot adjust stock twice.
+- A leaked bot token can be reset in the Developer Portal; update the env var and
+  restart `bot:discord`.
+
+The bot must run on the same machine as the app because it talks to
+`INVENTORY_API_URL`, and PGlite allows only one process to hold the database.
 
 ## Troubleshooting
 
@@ -356,6 +436,8 @@ Cloudflare Tunnel with a stable hostname.
 | Telegram bot never replies                     | Re-run `setWebhook` and inspect `getWebhookInfo`: `curl -s "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getWebhookInfo"`. Check `last_error_message`. |
 | Telegram replies stop after a restart          | Quick Tunnel URLs change. Restart the tunnel, update `NEXT_PUBLIC_APP_URL`, restart the server, re-run `setWebhook`. |
 | Telegram webhook returns 503                   | One of the four `TELEGRAM_*` / `INVENTORY_TELEGRAM_*` variables is empty. Fill `.env` and restart the server.        |
+| Discord bot is online but ignores messages     | Enable the Message Content intent, confirm `DISCORD_CHANNEL_ID` matches, and check the PIN prefix.                  |
+| Discord route returns 503                      | `DISCORD_CHANNEL_ID` or `INVENTORY_DISCORD_PIN` is empty; fill `.env.local` and restart the server.                 |
 | SMS or Telegram command is ignored             | The sender/chat is not the allowlisted one, the PIN is wrong, or the book identifier does not match a slug or ISBN. |
 
 ## Deploying

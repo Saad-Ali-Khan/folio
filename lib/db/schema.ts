@@ -51,5 +51,13 @@ export const telegramUpdates = pgTable("telegram_updates", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const discordCommands = pgTable("discord_commands", {
+  id: serial("id").primaryKey(),
+  messageId: text("message_id").notNull().unique(),
+  channelId: text("channel_id").notNull(),
+  command: text("command").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export type Book = typeof books.$inferSelect;
 export type Order = typeof orders.$inferSelect;

@@ -1,6 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
-import { eq, or, sql } from "drizzle-orm";
-import { getDb } from "@/lib/db";
+import { eq, sql } from "drizzle-orm";
+import { findBookByIdentifier, getDb } from "@/lib/db";
 import { books, telegramUpdates } from "@/lib/db/schema";
 import {
   INVENTORY_HELP,
@@ -107,16 +107,7 @@ export async function POST(request: Request) {
 
   try {
     const db = await getDb();
-    const [book] = await db
-      .select()
-      .from(books)
-      .where(
-        or(
-          eq(books.slug, identifier.toLowerCase()),
-          eq(books.isbn, identifier.replace(/[-\s]/g, "")),
-        ),
-      )
-      .limit(1);
+    const book = await findBookByIdentifier(db, identifier);
 
     if (!book) {
       await sendMessage(token, chatId, `No book matches "${identifier}".`);

@@ -12,15 +12,19 @@
     "db:setup": "tsx scripts/setup-db.ts",
     "db:seed": "tsx scripts/seed.ts",
     "db:studio": "drizzle-kit studio",
-    "books": "tsx scripts/books.ts"
+    "books": "tsx scripts/books.ts",
+    "bot:discord": "tsx --env-file=.env.local scripts/discord-bot.ts"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.13",
+    "@zxing/library": "^0.23.0",
+    "discord.js": "^14.28.1",
     "drizzle-orm": "^0.45.4",
     "next": "16.4.3",
     "postgres": "^3.4.9",
     "react": "19.3.0",
     "react-dom": "19.3.0",
+    "sharp": "^0.35.5",
     "stripe": "^23.0.1",
     "twilio": "^6.2.0"
   },
@@ -29,6 +33,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "bwip-js": "^4.11.4",
     "drizzle-kit": "^0.31.11",
     "eslint": "^9",
     "eslint-config-next": "16.4.3",
