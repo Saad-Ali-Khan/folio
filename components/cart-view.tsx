@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { BookCover } from "@/components/book-cover";
 import { useCart } from "@/components/cart-provider";
+import { shippingFor, FREE_SHIPPING_AT } from "@/lib/store-policy";
 import { formatPrice } from "@/lib/format";
+import { readCheckoutAttempt, writeCheckoutAttempt, type CheckoutAttempt } from "@/lib/checkout-attempt";
 
 type LiveBook = { id: number; priceCents: number; stock: number };
 
@@ -15,6 +17,8 @@ export function CartView() {
     books: Record<number, LiveBook>;
   } | null>(null);
   const [checkingOut, setCheckingOut] = useState(false);
+  const [attempt, setAttempt] = useState<CheckoutAttempt | null>(null);
+  const [availabilityVersion, refreshAvailability] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   const idsKey = useMemo(
@@ -35,6 +39,7 @@ export function CartView() {
       )
       .then((data: { books?: LiveBook[] }) => {
         if (cancelled) return;
+        setAttempt(readCheckoutAttempt());
         setAvailability({
           idsKey,
           books: Object.fromEntries(
@@ -49,7 +54,7 @@ export function CartView() {
     return () => {
       cancelled = true;
     };
-  }, [idsKey]);
+  }, [idsKey, availabilityVersion]);
 
   const live =
     availability && availability.idsKey === idsKey ? availability.books : {};
@@ -72,16 +77,26 @@ export function CartView() {
     0,
   );
   const blocked = detailed.some((item) => item.unavailable || item.overStock);
+  const checkoutItems = items.map(({ id, qty }) => ({ id, qty })).sort((a, b) => a.id - b.id);
+  const cart = JSON.stringify(checkoutItems);
+  const canResume = attempt?.cart === cart;
 
   async function handleCheckout() {
     setError(null);
     setCheckingOut(true);
     try {
+      const previous = attempt ?? readCheckoutAttempt();
+      const active = previous?.cart === cart && previous.expiresAt > Date.now()
+        ? previous
+        : { id: crypto.randomUUID(), cart, expiresAt: Date.now() + 60 * 60 * 1000 };
+      setAttempt(active);
+      writeCheckoutAttempt(active);
       const response = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          items: purchasable.map(({ id, qty }) => ({ id, qty })),
+          items: checkoutItems,
+          attemptId: active.id,
         }),
       });
       const data = (await response.json().catch(() => ({}))) as {
@@ -89,6 +104,12 @@ export function CartView() {
         error?: string;
       };
       if (!response.ok || !data.url) {
+        if (response.status === 410 || response.status === 409) {
+          setAttempt(null);
+          writeCheckoutAttempt(null);
+          setAvailability(null);
+          refreshAvailability(version => version + 1);
+        }
         throw new Error(data.error ?? "Checkout is unavailable right now.");
       }
       window.location.assign(data.url);
@@ -216,10 +237,12 @@ export function CartView() {
           <span className="font-medium">{formatPrice(total)}</span>
         </div>
         <p className="mt-1 text-xs text-ink/50">
-          Shipping calculated at checkout.
+          Pakistan delivery. Free shipping on book orders of {formatPrice(FREE_SHIPPING_AT)} or more.
         </p>
 
-        {blocked && (
+        <div className="mt-3 flex justify-between text-sm"><span>Shipping</span><span>{formatPrice(shippingFor(total))}</span></div>
+        <div className="mt-3 flex justify-between font-medium"><span>Total</span><span>{formatPrice(total + shippingFor(total))}</span></div>
+        {blocked && !canResume && (
           <p className="mt-3 text-xs text-red-700">
             Adjust the highlighted quantities to continue.
           </p>
@@ -233,10 +256,10 @@ export function CartView() {
         <button
           type="button"
           onClick={handleCheckout}
-          disabled={checkingOut || blocked || purchasable.length === 0}
+          disabled={checkingOut || (!canResume && (blocked || purchasable.length === 0))}
           className="mt-5 w-full rounded-full bg-ink px-4 py-3 text-sm font-medium text-cream transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:bg-ink/20"
         >
-          {checkingOut ? "Redirecting…" : "Checkout"}
+          {checkingOut ? "Redirecting…" : canResume ? "Resume checkout" : "Checkout"}
         </button>
         <p className="mt-3 text-center text-xs text-ink/50">
           Secure payment via Stripe

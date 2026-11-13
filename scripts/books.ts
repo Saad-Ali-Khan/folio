@@ -11,7 +11,7 @@ const usage = `Usage:
     [--stock 5] [--description "..."] [--slug new-slug] [--isbn 978...] [--cover "https://..."]
   npm run books -- set-stock <slug|isbn|id> <qty>
 
---price is in dollars. --stock defaults to 0. --cover defaults to the Open
+--price is in PKR. --stock defaults to 0. --cover defaults to the Open
 Library cover for the ISBN.`;
 
 type Flags = Record<string, string | true>;
@@ -62,7 +62,7 @@ function toSlug(title: string) {
 function parsePrice(raw: string) {
   const price = Number(raw);
   if (!Number.isFinite(price) || price <= 0) {
-    throw new Error("--price expects a positive amount in dollars, e.g. 12.99.");
+    throw new Error("--price expects a positive amount in PKR, e.g. 12.99.");
   }
   return Math.round(price * 100);
 }
@@ -112,6 +112,14 @@ async function main() {
   const { db, close } = await createDatabase();
 
   try {
+    if (command === "publish" || command === "draft") {
+      const book = await findBook(db, positional[0] ?? "");
+      if (!book) throw new Error("Book not found.");
+      if (command === "publish" && (book.priceCents <= 0 || book.author === "Unknown author")) throw new Error("Set price and author before publishing.");
+      await db.update(books).set({status: command === "publish" ? "published" : "draft"}).where(eq(books.id, book.id));
+      console.log(command === "publish" ? "Book published." : "Book moved to drafts.");
+      return;
+    }
     if (command === "list") {
       const rows = await db
         .select()
@@ -124,14 +132,15 @@ async function main() {
       }
 
       console.log(
-        ["id", "stock", "price", "slug", "title — author"].join("\t"),
+        ["id", "status", "stock", "price", "slug", "title — author"].join("\t"),
       );
       for (const book of rows) {
         console.log(
           [
             book.id,
+            book.status,
             book.stock,
-            `$${(book.priceCents / 100).toFixed(2)}`,
+            `PKR ${(book.priceCents / 100).toFixed(2)}`,
             book.slug,
             `${book.title} — ${book.author}`,
           ].join("\t"),

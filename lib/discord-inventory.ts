@@ -1,5 +1,6 @@
+import {lookupImportMetadata} from "./import-metadata";
 import { randomBytes, timingSafeEqual } from "node:crypto";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, gte, sql } from "drizzle-orm";
 import type { Database } from "@/lib/db";
 import { books, discordCommands, type Book } from "@/lib/db/schema";
 import type { InventoryVerb } from "@/lib/inventory-command";
@@ -42,19 +43,21 @@ export async function executeCommand(
 
     if (!logged) return { duplicate: true as const };
 
+    await tx.execute(sql`select set_config('folio.stock_reason', ${summary}, true)`);
     const nextStock =
       verb === "SET"
         ? (qty ?? 0)
         : verb === "ADD"
           ? sql`${books.stock} + ${qty ?? 0}`
-          : sql`greatest(${books.stock} - ${qty ?? 0}, 0)`;
+          : sql`${books.stock} - ${qty ?? 0}`;
 
     const [updated] = await tx
       .update(books)
       .set({ stock: nextStock })
-      .where(eq(books.id, book.id))
+      .where(and(eq(books.id, book.id), verb === "SOLD" ? gte(books.stock, qty ?? 0) : undefined))
       .returning({ stock: books.stock });
 
+    if (!updated) throw new Error("Not enough stock. Check the quantity before recording a sale.");
     return { duplicate: false as const, stock: updated.stock };
   });
 
@@ -68,82 +71,17 @@ export type BookMetadata = {
   author: string;
   isbn: string | null;
   coverUrl: string | null;
+  coverWorkId?: string;
 };
 
-export async function fetchMetadataByTitle(
-  title: string,
-): Promise<BookMetadata> {
-  const fallback: BookMetadata = {
-    title,
-    author: "Unknown author",
-    isbn: null,
-    coverUrl: null,
-  };
-  try {
-    const response = await fetch(
-      `https://openlibrary.org/search.json?title=${encodeURIComponent(title)}&limit=1`,
-      { signal: AbortSignal.timeout(6000) },
-    );
-    if (!response.ok) return fallback;
-    const data = (await response.json()) as {
-      docs?: {
-        title?: string;
-        author_name?: string[];
-        isbn?: string[];
-        cover_i?: number;
-      }[];
-    };
-    const doc = data.docs?.[0];
-    if (!doc) return fallback;
-    const isbn = doc.isbn?.[0] ?? null;
-    return {
-      title: doc.title?.trim() || title,
-      author: doc.author_name?.[0] ?? fallback.author,
-      isbn,
-      coverUrl: isbn
-        ? `https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg`
-        : doc.cover_i
-          ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg`
-          : null,
-    };
-  } catch {
-    return fallback;
-  }
+export function inventoryEditionKey(meta: BookMetadata): string | null {
+  return meta.isbn ?? (meta.coverWorkId ? `manual-cover-${meta.coverWorkId.toLowerCase()}` : null);
 }
 
-export async function fetchMetadataByIsbn(
-  isbn: string,
-): Promise<BookMetadata | null> {
-  try {
-    const response = await fetch(
-      `https://openlibrary.org/search.json?isbn=${encodeURIComponent(isbn)}&limit=1`,
-      { signal: AbortSignal.timeout(6000) },
-    );
-    if (!response.ok) return null;
-    const data = (await response.json()) as {
-      docs?: {
-        title?: string;
-        author_name?: string[];
-        isbn?: string[];
-        cover_i?: number;
-      }[];
-    };
-    const doc = data.docs?.[0];
-    if (!doc?.title) return null;
-    const coverIsbn =
-      doc.isbn?.find((value) => value.replace(/[-\s]/g, "") === isbn) ?? isbn;
-    return {
-      title: doc.title.trim(),
-      author: doc.author_name?.[0] ?? "Unknown author",
-      isbn: coverIsbn,
-      coverUrl: doc.cover_i
-        ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg`
-        : `https://covers.openlibrary.org/b/isbn/${coverIsbn}-L.jpg`,
-    };
-  } catch {
-    return null;
-  }
+export async function fetchMetadataByTitle(title:string):Promise<import("./import-metadata").ImportMetadata>{
+ return await lookupImportMetadata({title}) ?? {title,author:"Unknown author",isbn:null,coverUrl:null,titleNote:"Metadata unavailable; review the title and author in inventory."};
 }
+export async function fetchMetadataByIsbn(isbn:string){return lookupImportMetadata({isbn});}
 
 export async function createBook(
   db: Database,
@@ -162,7 +100,7 @@ export async function createBook(
     .values({
       title: meta.title,
       author: meta.author,
-      isbn: meta.isbn ?? `manual-${randomBytes(5).toString("hex")}`,
+      isbn: inventoryEditionKey(meta) ?? `manual-${randomBytes(5).toString("hex")}`,
       slug,
       priceCents: 0,
       stock,
@@ -194,4 +132,23 @@ export async function logScan(
     .onConflictDoNothing({ target: discordCommands.messageId })
     .returning({ id: discordCommands.id });
   return Boolean(logged);
+}
+
+export async function importDiscordBook(db: Database, messageId: string, channelId: string, meta: BookMetadata, qty: number) {
+ const editionKey = inventoryEditionKey(meta);
+ return db.transaction(async tx => {
+  const [claim] = await tx.insert(discordCommands).values({messageId, channelId, command: 'IMPORT ' + meta.title}).onConflictDoNothing().returning();
+  if (!claim) return null;
+  // Serialize imports of the same edition across different Discord messages.
+  await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${editionKey ?? meta.title.toLowerCase()}))`);
+  const [existing] = await tx.select().from(books).where(editionKey ? eq(books.isbn, editionKey) : sql`lower(${books.title}) = ${meta.title.toLowerCase()}`).limit(1);
+  if (existing) {
+   const [updated] = await tx.update(books).set({stock: sql`${books.stock} + ${qty}`})
+     .where(and(eq(books.id, existing.id), meta.coverWorkId ? eq(books.status, "draft") : undefined))
+     .returning();
+   if (!updated) throw new Error("The inventory entry changed. Send the photo again or scan the ISBN barcode.");
+   return updated;
+  }
+  return createBook(tx as unknown as Database, meta, qty);
+ });
 }

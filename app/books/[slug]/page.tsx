@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { cache } from "react";
-import { eq } from "drizzle-orm";
+import { and, eq, gt } from "drizzle-orm";
 import { AddToCartButton } from "@/components/add-to-cart";
 import { BookCover } from "@/components/book-cover";
 import { getDb } from "@/lib/db";
@@ -21,7 +21,7 @@ const getBook = cache(async (slug: string) => {
   const [book] = await db
     .select()
     .from(books)
-    .where(eq(books.slug, slug))
+    .where(and(eq(books.slug, slug), eq(books.status, "published"), gt(books.priceCents, 0)))
     .limit(1);
   return book ?? null;
 });
@@ -119,7 +119,7 @@ export default async function BookPage({
             </div>
             <div>
               <dt className="text-ink/50">Shipping</dt>
-              <dd className="mt-0.5">Free over $35</dd>
+              <dd className="mt-0.5">Calculated at checkout</dd>
             </div>
           </dl>
         </div>

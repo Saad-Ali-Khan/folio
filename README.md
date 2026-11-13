@@ -453,3 +453,225 @@ dashboard so orders are recorded in production.
 Accounts, reviews, wishlists, admin CRUD, inventory reservations during
 checkout, shipping/tax calculation, refunds and order history. Catalog changes
 go through the `books` CLI, or Drizzle Studio when `DATABASE_URL` is set.
+
+## Draft books and inventory audit
+
+New books added by Discord or the CLI start as drafts and are hidden from the
+catalog, book pages, and checkout. Existing positively priced books remain
+published after migration. Review the edition and author before publishing.
+
+In your configured Discord channel, prefix these commands with your PIN:
+
+```text
+<PIN> PRICE east-of-eden 14.99
+<PIN> PUBLISH east-of-eden
+<PIN> DRAFT east-of-eden
+```
+
+Use an ISBN or exact slug to select an edition. PRICE does not publish a draft.
+If metadata lookup returns Unknown author, fix it with the CLI before publishing:
+
+```powershell
+npm run books -- edit east-of-eden --author "John Steinbeck"
+npm run books -- publish east-of-eden
+npm run books -- draft east-of-eden
+```
+
+Stop the local dev server before CLI database commands when using PGlite.
+`npm run books -- list` includes publication status.
+
+The stock_movements table records opening balances, receipts, and every stock
+change through a database trigger, including CLI and payment updates. Discord
+stock commands include the command as the reason; other updates currently use
+an inventory-adjustment reason. This is a quantity audit, not a revenue ledger
+or a per-user audit. Discord SOLD rejects quantities above available stock.
+
+Regression checks: `npx tsx scripts/test-business-logic.ts` uses an isolated,
+in-memory database and does not change your catalog.
+
+Checkout now aggregates duplicate item IDs and rejects draft/unpriced books.
+Stock reservations, shipping rules, payment/fulfillment lifecycle, per-operator
+permissions, and sale-price snapshots still require implementation before a
+production launch.
+
+## Pakistan checkout, reservations, and fulfillment
+
+The store now charges PKR and accepts delivery addresses in Pakistan only.
+`lib/store-policy.ts` defines the shipping rules in minor units (100 paisa =
+PKR 1): PKR 250 below a PKR 5,000 book subtotal, free at PKR 5,000 and above.
+The cart shows the fee and total before payment; the server calculates them
+again from current prices. No tax calculation is configured.
+
+**Currency migration:** existing USD-entered book prices are preserved but all
+books are moved to drafts. Review and set PKR prices before republishing. Seed
+books are drafts too. Historical orders retain their USD currency label.
+
+Stock now means **available to sell**, excluding active checkout reservations.
+SET adjusts available stock, not the physical count including held copies.
+Checkout atomically reserves stock and creates an immutable snapshot of titles,
+ISBNs, quantities, and prices. Stripe sessions expire after one hour. Closing
+Stripe or returning to the cart does not immediately cancel the session; stock
+is released on confirmed expiry or explicit cancellation. Paid checkouts do
+not deduct stock a second time.
+
+Configure Stripe keys and forward webhooks as before. Subscribe to:
+- checkout.session.completed
+- checkout.session.expired
+- checkout.session.async_payment_succeeded
+- checkout.session.async_payment_failed
+- charge.refunded
+
+Only card payments are offered initially. Payment events are verified against
+Stripe's latest session, the saved totals, and a Pakistan shipping address.
+Unknown legacy sessions and mismatches require manual reconciliation rather
+than silently inventing an order. Refund events track partial/full refunds but
+do not return physical stock automatically.
+
+Order operations (stop the local app first when using PGlite):
+
+```powershell
+npm run orders -- list
+npm run orders -- show 1
+npm run orders -- packed 1
+npm run orders -- shipped 1 TRACKING123
+npm run orders -- delivered 1
+npm run orders -- return 1 2 1 return-reference-unique
+npm run orders -- cancel-order 1
+npm run orders -- reconcile
+npm run orders -- cancel-checkout CHECKOUT_UUID
+```
+
+`return` arguments are order ID, order-item ID, quantity, and a unique return
+reference. Only record inspected, resaleable items; reusing the same reference
+is safe. Different partial returns require different references. Refund money
+through Stripe; the CLI does not execute financial refunds. cancel-order
+requires a full refund and an unshipped order. Restock inspected copies with
+return separately. Shipment requires packing, payment, and a tracking number;
+delivery requires shipment.
+
+Run reconcile after downtime or webhook failures. Confirmed expired sessions
+release stock; paid sessions create the order once. Lost session-creation
+responses are recovered using Stripe metadata or the original idempotency key.
+If the outcome cannot be proven, the command reports manual review and leaves
+the stock held. Never release uncertain holds solely because local time passed.
+Run `npm run orders -- reconcile-loop` as a supervised PostgreSQL-backed worker
+in staging and production. It checks held orders every five minutes, recovers
+known Stripe sessions, releases confirmed expired checkouts, and logs unresolved
+holds for review. It never creates a payment session for an abandoned checkout.
+Configure Stripe for PKR card payments before taking live orders.
+
+Tests: `npx tsx scripts/test-orders.ts`, `npx tsx scripts/test-business-logic.ts`,
+`npm run typecheck`, and `npm run lint`. Order tests use an isolated database and
+simulated Stripe objects; live Stripe integration still needs test keys and a
+webhook listener.
+
+## Inventory management page
+
+Open http://localhost:3000/admin or select **Manage inventory** in the footer.
+Unlock it with your existing Discord inventory PIN. The page shows drafts,
+published books, search by title/author/ISBN, and an editor for title, author,
+description, PKR price, available copies, and publication status. No server
+restart is needed when saving. New books received through Discord appear after
+Refresh. Drafts stay hidden from shoppers.
+
+Use **Edit**, review details and the PKR price, choose Published under Visibility,
+and select **Save & publish**. Set Visibility back to Draft to unpublish.
+Stock changes are audited; conflicting edits are rejected rather than overwriting
+changes made by checkout or Discord. ISBN and slug are shown read-only to keep
+edition identity stable.
+
+Admin API reads and writes require a signed, HttpOnly eight-hour session. Writes
+also require a matching Origin. Five incorrect PIN attempts temporarily block
+login. **Lock inventory** clears the current browser session. By default the
+server uses INVENTORY_DISCORD_PIN and INVENTORY_DISCORD_SECRET; set ADMIN_PIN and
+ADMIN_SESSION_SECRET for separate credentials (then restart the app). Changing
+the PIN or secret invalidates existing sessions. Use HTTPS when hosting it.
+
+Run `npx tsx scripts/test-admin.ts` to test admin validation and auth against an
+isolated database.
+
+## Import books from Discord photos
+
+Upload a clear photo of the front cover or ISBN barcode to the inventory channel
+without a caption. The bot adds one copy per matched photo. A new ISBN creates
+a draft, and an ISBN already in inventory increases its stock. For new ISBNs,
+Folio checks Open Library, verified British Council editions in
+`lib/isbn-catalogs.ts`, then the public HathiTrust Bibliographic API. British
+Council coverage grows as verified editions are added to the list. If none of
+these sources yields a match, the draft keeps its ISBN for review.
+
+Front-cover scanning reads the printed title and author locally. Use a clear
+Latin-script cover with both visible. A confident catalog match creates or adds
+to a draft for edition review. Cover-only imports have no verified ISBN. Scan the
+barcode to identify a specific edition. If the bot cannot distinguish a match,
+it asks for a clearer photo or the barcode.
+
+The Discord server owner can use caption-free imports by default. Set
+`DISCORD_PHOTO_USER_IDS` to a comma-separated list of Discord user IDs to
+choose who can use them. Existing PIN captions still support quantities and
+the `ADD`, `SET`, and `SOLD` commands.
+
+## English and original display titles
+
+New Discord imports prefer a verified English edition title from the same Open
+Library work. If the work/catalog title differs, the bot pauses the import and
+asks whether to use English (recommended) or the original/catalog title. The
+scanned ISBN and cover remain those of the scanned edition. Selecting an English
+display title does not mean the physical copy is English-language.
+
+Choose **English**, **Original title**, or **Cancel** using the buttons in the
+bot's reply.
+
+Only the initiating Discord user in that channel can resolve the request. Choices
+are stored in the database, expire after 15 minutes, and add stock only once.
+If no verified English title is available, the import keeps its edition/catalog
+title and explicitly asks you to review it manually; translations are not guessed.
+Open Library's work title is labeled original/catalog because it is not always
+reliably identified as the original-language title.
+
+To review an existing book without adding stock:
+
+```text
+<PIN> TITLES 9780141037455
+```
+
+This offers the same title choice and changes only the display title, leaving
+its ISBN, cover, slug, price, and stock alone. Existing titles are never silently
+rewritten. Restart `npm run bot:discord` after updating so it forwards the
+Discord user ID needed to bind title choices to the requester.
+
+Test with `npx tsx scripts/test-title-choice.ts` and `npx tsx scripts/test-discord-photo.ts`.
+
+## Staging and production setup
+
+Use Node.js 22.9 or later and a dedicated PostgreSQL database for each environment.
+Set `DATABASE_URL` and the HTTPS `NEXT_PUBLIC_APP_URL` before building and starting
+the app. Run `npm run db:setup` before deploying. Pending migrations and their
+ledger entries commit together. Back up the target database and verify that the
+backup restores before migrating an existing store.
+
+Set `ADMIN_PIN` to a generated access code of 16–128 characters and
+`ADMIN_SESSION_SECRET` to a separate random value of at least 32 characters.
+Production rejects Discord credentials for admin login. Rotate the shared
+Discord inventory PIN before launch. Set `TRUSTED_CLIENT_IP_HEADER` to the
+single-address header your reverse proxy overwrites on each request. Block
+direct access to the app server so a caller cannot supply its own IP header.
+Checkout and admin login require this header in production.
+
+When Discord suggests an edition for an ambiguous inventory command, the
+requester replies with `<PIN> CONFIRM <code> <number>` in the same channel.
+Use `CANCEL` in place of the number to cancel. Exact ISBN and slug commands
+still run directly.
+
+For Stripe staging, configure test credentials and the signed webhook, then
+start the web app, Discord bot, and `npm run orders -- reconcile-loop` under
+your host's process supervisor. Use the same Stripe account for the web app,
+webhook, and recovery worker. The worker logs uncertain reservations for
+operator review. Check its logs and Stripe's webhook deliveries after a test.
+
+Before opening checkout, verify a PKR purchase with a Pakistan address, a
+cancelled or expired checkout, a repeated checkout request, and a partial
+refund followed by fulfillment of the remaining items. Confirm the order,
+stock balance, and refund in the database after each flow. Run lint and the
+test scripts against the release and complete a production build on the
+target host before using live credentials.

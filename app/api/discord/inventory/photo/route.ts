@@ -1,18 +1,23 @@
+import {queueTitleChoice} from "@/lib/title-choice";
+import { eq } from "drizzle-orm";
+import { readCoverLines } from "@/lib/cover-ocr";
+import { books, discordCommands } from "@/lib/db/schema";
+import { CatalogUnavailable, lookupCoverMetadata, lookupIsbnMetadata } from "@/lib/import-metadata";
 import { getDb, findBookByIdentifier } from "@/lib/db";
 import type { InventoryVerb } from "@/lib/inventory-command";
 import {
-  createBook,
+  importDiscordBook,
   executeCommand,
-  fetchMetadataByIsbn,
-  logScan,
+  inventoryEditionKey,
   secureEqual,
 } from "@/lib/discord-inventory";
 import { decodeBarcode, normalizeIsbn } from "@/lib/inventory-scan";
 
 const MAX_QTY = 999;
+const MAX_PHOTO_BYTES = 12 * 1024 * 1024;
 
 const PHOTO_HELP =
-  "Photo commands: <PIN> [ADD|SET|SOLD] [qty] — e.g. 840071 ADD 3.";
+  "Upload the front cover or ISBN barcode without a caption to add one copy. For a different quantity, use <PIN> ADD <quantity>.";
 
 type ScanCommand = { verb: InventoryVerb; qty: number };
 
@@ -54,6 +59,7 @@ export async function POST(request: Request) {
 
   const channelId = request.headers.get("x-channel-id")?.trim() ?? "";
   const messageId = request.headers.get("x-message-id")?.trim() ?? "";
+  const userId = request.headers.get("x-user-id")?.trim() ?? "";
   if (!messageId || !channelId) {
     return new Response("Missing message-id or channel-id.", { status: 400 });
   }
@@ -68,24 +74,54 @@ export async function POST(request: Request) {
     return new Response("Expected an image body.", { status: 400 });
   }
 
-  const [pinToken, ...rest] = (
-    request.headers.get("x-command-text") ?? ""
-  )
-    .trim()
-    .split(/\s+/);
-  if (!pinToken || !secureEqual(pinToken, pin)) return reply("Unauthorized.");
+  const caption = request.headers.get("x-command-text")?.trim() ?? "";
+  let command: ScanCommand = { verb: "ADD", qty: 1 };
+  if (caption) {
+    const [pinToken, ...rest] = caption.split(/\s+/);
+    if (!secureEqual(pinToken, pin)) return reply("Incorrect inventory PIN.");
+    const parsed = parseScanCommand(rest);
+    if (parsed === "invalid") return reply(PHOTO_HELP);
+    command = parsed;
+  } else {
+    // Both identities come from the authenticated Discord bot, not the caption.
+    const allowedUsers = (process.env.DISCORD_PHOTO_USER_IDS ?? "").split(",").map(id => id.trim()).filter(Boolean);
+    const owner = request.headers.get("x-guild-owner-id");
+    if (!userId || !(allowedUsers.length ? allowedUsers.includes(userId) : userId === owner)) {
+      return reply("Your account is not enabled for photo-only imports. Ask the store operator to enable it.");
+    }
+  }
 
-  const command = parseScanCommand(rest);
-  if (command === "invalid") return reply(PHOTO_HELP);
+  if (Number(request.headers.get("content-length")) > MAX_PHOTO_BYTES) return reply("This photo exceeds 12 MB. Send a smaller image.");
 
   try {
     const image = Buffer.from(await request.arrayBuffer());
+    if (image.length > MAX_PHOTO_BYTES) return reply("This photo exceeds 12 MB. Send a smaller image.");
+    const db = await getDb();
+    const [processed] = await db.select({ id: discordCommands.id }).from(discordCommands).where(eq(discordCommands.messageId, messageId));
+    if (processed) return reply("Already processed.");
 
     const rawCode = await decodeBarcode(image);
     if (!rawCode) {
-      return reply(
-        "Couldn't read a barcode from that photo. Try sharper light, fill the frame with the barcode, and keep it flat.",
-      );
+      if (command.verb !== "ADD") return reply("Include a readable ISBN barcode for SET or SOLD.");
+      let firstMatch;
+      try {
+        firstMatch = await lookupCoverMetadata(await readCoverLines(image));
+      } catch (error) {
+        if (!(error instanceof CatalogUnavailable)) throw error;
+        console.warn("First cover catalog lookup failed. Retrying with focused OCR.", error.cause);
+      }
+      const meta = firstMatch ?? await lookupCoverMetadata(await readCoverLines(image, true), true);
+      const key = meta && inventoryEditionKey(meta);
+      if (!meta || !key) return reply("I couldn’t confidently identify this book. Send a sharper photo showing the title and author, or the ISBN barcode.");
+
+      const [coverDraft] = await db.select({ id: books.id, status: books.status }).from(books).where(eq(books.isbn, key));
+      if (coverDraft?.status === "published") return reply("This cover matches a published book with an unverified edition. Send the ISBN barcode to identify the copy.");
+      if (!coverDraft && meta.titleOptions) {
+        return Response.json(await queueTitleChoice(db, messageId, channelId, userId, meta, command.qty));
+      }
+      const received = await importDiscordBook(db, messageId, channelId, meta, command.qty);
+      if (!received) return reply("Already processed.");
+      return reply(`Received ${command.qty} ${command.qty === 1 ? "copy" : "copies"} of ${received.title}. Draft stock: ${received.stock}. Review the edition in inventory.`);
     }
 
     const isbn = normalizeIsbn(rawCode);
@@ -93,7 +129,6 @@ export async function POST(request: Request) {
       return reply(`Decoded "${rawCode}" but it is not a book ISBN (need EAN-13 starting 978/979).`);
     }
 
-    const db = await getDb();
     const book = await findBookByIdentifier(db, isbn);
 
     if (book) {
@@ -108,22 +143,30 @@ export async function POST(request: Request) {
       return reply(result ?? `Already processed. (${book.title}: ${book.stock} in stock.)`);
     }
 
-    const logged = await logScan(db, messageId, channelId, isbn);
-    if (!logged) return reply("Already processed.");
 
-    const meta = await fetchMetadataByIsbn(isbn);
-    if (!meta) {
-      return reply(
-        `No book found for ISBN ${isbn}. Add it manually with \`npm run books -- add --title "..." --isbn ${isbn}\`.`,
-      );
-    }
+    if (command.verb !== "ADD") return reply("Unknown ISBN. Use ADD to receive a new book first.");
+    const lookup = await lookupIsbnMetadata(isbn);
+    const meta = lookup.status === "found" ? lookup.metadata : {
+      title: `ISBN ${isbn}`,
+      author: "Unknown author",
+      isbn,
+      coverUrl: `https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg`,
+      titleNote: lookup.status === "missing"
+        ? "No matching record was found for this ISBN. I saved an ISBN-only draft for you to complete in inventory."
+        : "The catalog lookup failed. I saved an ISBN-only draft for you to complete in inventory.",
+    };
 
-    const stock = command.verb === "SOLD" ? 0 : command.qty;
-    const created = await createBook(db, meta, stock);
+    if (meta.titleOptions) return Response.json(await queueTitleChoice(db, messageId, channelId, userId, meta, command.qty));
+    const created = await importDiscordBook(db, messageId, channelId, meta, command.qty);
+    if (!created) return reply("Already processed.");
     return reply(
-      `Added "${created.title}" (${created.slug}) from ISBN ${isbn}: stock ${created.stock}. Price unset ($0.00) — set it with \`npm run books -- edit ${created.slug} --price 9.99\`.`,
+      `Added "${created.title}" (${created.slug}) from ISBN ${isbn}: stock ${created.stock}. ${meta.titleNote ?? ""} Draft saved; set a price and publish before selling. Set price with \`npm run books -- edit ${created.slug} --price 1500\`.`,
     );
   } catch (error) {
+    if (error instanceof CatalogUnavailable) {
+      console.warn("Cover catalog unavailable after retry", error.cause);
+      return reply("I scanned the cover, but the book catalog didn’t respond. Resend the same photo in a moment, or scan the ISBN barcode.");
+    }
     console.error("Inventory Discord photo failed", error);
     return new Response("Inventory photo scan failed.", { status: 500 });
   }

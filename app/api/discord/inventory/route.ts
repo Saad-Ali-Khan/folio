@@ -1,48 +1,31 @@
+import {queueTitleChoice,resolveTitleChoice} from "@/lib/title-choice";
+import { queueStockChoice, resolveStockChoice } from "@/lib/discord-stock-choice";
 import { findBookByIdentifier, getDb } from "@/lib/db";
-import { books, type Book } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
+import { books } from "@/lib/db/schema";
 import {
   INVENTORY_HELP,
   parseInventoryCommand,
-  type InventoryVerb,
 } from "@/lib/inventory-command";
 import { findBookCandidates } from "@/lib/inventory-guess";
 import {
-  createBookFromTitle,
+  importDiscordBook,
+  fetchMetadataByTitle,
+  fetchMetadataByIsbn,
   executeCommand,
   secureEqual,
 } from "@/lib/discord-inventory";
 
-const PENDING_TTL_MS = 5 * 60 * 1000;
-
-type PendingGuess = {
-  verb: InventoryVerb;
-  qty: number | null;
-  candidates: Book[];
-  expiresAt: number;
-};
-
-const pendingByChannel = new Map<string, PendingGuess>();
-
 type DiscordCommand = {
+  userId?: string;
   messageId?: string;
   channelId?: string;
   text?: string;
+  titleChoice?: { id?: unknown; selection?: unknown };
 };
 
 function reply(text: string | null) {
   return Response.json({ reply: text });
-}
-
-function parseGuessResponse(
-  text: string,
-  count: number,
-): number | "cancel" | "invalid" {
-  const value = text.toLowerCase();
-  if (value === "no" || value === "n") return "cancel";
-  if (value === "yes" || value === "y") return 0;
-  const pick = Number(value);
-  if (Number.isInteger(pick) && pick >= 1 && pick <= count) return pick - 1;
-  return "invalid";
 }
 
 export async function POST(request: Request) {
@@ -80,41 +63,25 @@ export async function POST(request: Request) {
     return reply(null);
   }
 
+  // Button interactions carry the account ID from Discord through the signed bot request.
+  if (body?.titleChoice) {
+    const { id, selection } = body.titleChoice;
+    if (typeof id !== "string" || !/^[0-9a-f]{10}$/.test(id) || typeof selection !== "string" || typeof body.userId !== "string") {
+      return reply("Invalid title choice.");
+    }
+    try {
+      return Response.json(await resolveTitleChoice(await getDb(), id, channelId, body.userId, selection));
+    } catch (error) {
+      console.error("Discord title choice failed", error);
+      return reply("Could not save that title choice. Try again.");
+    }
+  }
+
   const text = (body?.text ?? "").trim();
   if (!text) return reply(null);
 
   try {
     const db = await getDb();
-
-    // A pending guess is answered by a bare "yes" / "no" / number — no PIN.
-    const pending = pendingByChannel.get(channelId);
-    if (pending && !text.includes(" ")) {
-      if (pending.expiresAt <= Date.now()) {
-        pendingByChannel.delete(channelId);
-      } else {
-        const pick = parseGuessResponse(text, pending.candidates.length);
-        if (pick === "cancel") {
-          pendingByChannel.delete(channelId);
-          return reply("Cancelled.");
-        }
-        if (pick === "invalid") {
-          return reply(
-            `Pick a number 1–${pending.candidates.length}, or "no" to cancel.`,
-          );
-        }
-        const book = pending.candidates[pick];
-        pendingByChannel.delete(channelId);
-        const result = await executeCommand(
-          db,
-          messageId,
-          channelId,
-          pending.verb,
-          book,
-          pending.qty,
-        );
-        return reply(result);
-      }
-    }
 
     if (text.length > 160) return reply("Message too long.");
 
@@ -122,6 +89,34 @@ export async function POST(request: Request) {
     if (!secureEqual(pinToken ?? "", pin)) return reply("Unauthorized.");
 
     if (rest.length > 0) rest[0] = rest[0].replace(/^\//, "");
+
+    const action = rest[0]?.toUpperCase();
+    if (action === "CONFIRM") {
+      return reply(await resolveStockChoice(db, rest[1] ?? "", body?.userId ?? "", channelId, rest[2] ?? ""));
+    }
+    if(action === "TITLE") return Response.json(await resolveTitleChoice(db,rest[1]??"",channelId,body?.userId??"",(rest[2]??"").toUpperCase()));
+    if(action === "TITLES") {
+      const target=await findBookByIdentifier(db,rest.slice(1).join(" "));
+      if(!target)return reply("Book not found. Use the ISBN or exact slug.");
+      const meta=await fetchMetadataByIsbn(target.isbn);
+      if(!meta)return reply("Title lookup unavailable; edit the title manually in inventory.");
+      if(!meta.titleOptions)return reply(meta.titleNote ?? "No differing original and English titles were found. You can edit the title in inventory.");
+      return Response.json(await queueTitleChoice(db,messageId,channelId,body?.userId??"",meta,0,target.id));
+    }
+    if (["PRICE", "PUBLISH", "DRAFT"].includes(action)) {
+      const identifier = rest.slice(1, action === "PRICE" ? -1 : undefined).join(" ");
+      const target = await findBookByIdentifier(db, identifier);
+      if (!target) return reply("No matching book. Use its ISBN or slug.");
+      if (action === "PRICE") {
+        const amount = rest.at(-1) ?? "";
+        if (!/^\d+(\.\d{1,2})?$/.test(amount) || Number(amount) <= 0 || Number(amount) > 100000) return reply("Use PRICE <isbn|slug> <amount>, e.g. PRICE dune 14.99.");
+        await db.update(books).set({priceCents: Math.round(Number(amount)*100)}).where(eq(books.id,target.id));
+        return reply("Price updated. Publish the book when ready.");
+      }
+      if (action === "PUBLISH" && (target.priceCents <= 0 || !target.title.trim() || target.author === "Unknown author")) return reply("Set a positive price and review title/author before publishing.");
+      await db.update(books).set({status: action === "PUBLISH" ? "published" : "draft"}).where(eq(books.id,target.id));
+      return reply(action === "PUBLISH" ? "Book published." : "Book moved to drafts.");
+    }
     const command = parseInventoryCommand(rest);
     if (!command) return reply(INVENTORY_HELP);
 
@@ -146,25 +141,17 @@ export async function POST(request: Request) {
     );
 
     if (candidates.length > 0) {
-      pendingByChannel.set(channelId, {
-        verb: command.verb,
-        qty: command.qty,
-        candidates,
-        expiresAt: Date.now() + PENDING_TTL_MS,
-      });
-      const list = candidates
-        .map((candidate, index) => `${index + 1}. ${candidate.title} (${candidate.slug})`)
-        .join("\n");
-      return reply(
-        `No book matches "${identifier}". Did you mean:\n${list}\nReply "yes" for the first, a number to choose, or "no" to cancel.`,
-      );
+      return reply(await queueStockChoice(db, { messageId, channelId, userId: body?.userId ?? "" }, command, candidates));
     }
 
     if (command.verb === "ADD") {
       const qty = command.qty ?? 0;
-      const created = await createBookFromTitle(db, identifier, qty);
+      const meta=await fetchMetadataByTitle(identifier);
+      if(meta.titleOptions)return Response.json(await queueTitleChoice(db,messageId,channelId,body?.userId??"",meta,qty));
+      const created = await importDiscordBook(db, messageId, channelId, meta, qty);
+      if (!created) return reply("Already processed.");
       return reply(
-        `Added "${created.title}" (${created.slug}): stock ${created.stock}. Price unset ($0.00) — set it with \`npm run books -- edit ${created.slug} --price 9.99\`.`,
+        `Added "${created.title}" (${created.slug}): stock ${created.stock}. ${meta.titleNote ?? ""} Draft saved; set a price and publish before selling. Set price with \`npm run books -- edit ${created.slug} --price 1500\`.`,
       );
     }
 

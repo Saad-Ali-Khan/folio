@@ -29,6 +29,41 @@
       "when": 1793931807552,
       "tag": "0003_rapid_champions",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794386932484,
+      "tag": "0004_slim_doctor_octopus",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794387278477,
+      "tag": "0005_giant_ricochet",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794387456352,
+      "tag": "0006_hesitant_monster_badoon",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794461914077,
+      "tag": "0007_flowery_stature",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794483770365,
+      "tag": "0008_production_guards",
+      "breakpoints": true
     }
   ]
 }

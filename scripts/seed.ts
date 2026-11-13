@@ -193,6 +193,7 @@ async function main() {
   try {
     const rows = seedBooks.map((book) => ({
       ...book,
+      status: "draft",
       coverUrl: cover(book.isbn),
     }));
 

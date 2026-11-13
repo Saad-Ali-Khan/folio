@@ -23,7 +23,7 @@ export default function HomePage({
         </h1>
         <p className="mt-4 max-w-xl leading-relaxed text-ink/70">
           A small, carefully chosen shelf — classics, modern fiction, and a
-          little nonfiction. Free shipping over $35.
+          little nonfiction. Delivery within Pakistan.
         </p>
         <div className="mt-8 max-w-md">
           <SearchForm />

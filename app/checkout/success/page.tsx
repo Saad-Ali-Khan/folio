@@ -52,8 +52,10 @@ async function OrderSummary({ searchParams }: { searchParams: SearchParams }) {
 
   let email: string | null = null;
   let total = 0;
+  let shipping = 0;
   let lines: OrderLine[] = [];
   let paid = false;
+  let currency = "pkr";
 
   try {
     await connection();
@@ -62,6 +64,8 @@ async function OrderSummary({ searchParams }: { searchParams: SearchParams }) {
     });
     email = session.customer_details?.email ?? session.customer_email ?? null;
     total = session.amount_total ?? 0;
+    shipping = session.total_details?.amount_shipping ?? 0;
+    currency = session.currency ?? "pkr";
     paid = session.payment_status === "paid";
     lines = (session.line_items?.data ?? []).map((line) => ({
       name: line.description ?? "Book",
@@ -89,7 +93,7 @@ async function OrderSummary({ searchParams }: { searchParams: SearchParams }) {
       </h1>
       <p className="mt-3 leading-relaxed text-ink/70">
         {paid
-          ? `A receipt is on its way${email ? ` to ${email}` : ""}. Your books ship within 1–2 business days.`
+          ? `A receipt is on its way${email ? ` to ${email}` : ""}. We will prepare your order for delivery within Pakistan.`
           : "Stripe is still confirming your payment. Refresh in a moment to see the updated status."}
       </p>
 
@@ -105,16 +109,17 @@ async function OrderSummary({ searchParams }: { searchParams: SearchParams }) {
                 <span className="text-ink/50">× {line.qty}</span>
               </span>
               <span className="shrink-0 font-medium">
-                {formatPrice(line.amount)}
+                {formatPrice(line.amount, currency)}
               </span>
             </li>
           ))}
         </ul>
       )}
 
+      <div className="mt-4 flex justify-between text-sm"><span>Shipping</span><span>{formatPrice(shipping, currency)}</span></div>
       <div className="mt-4 flex justify-between text-base font-medium">
         <span>Total</span>
-        <span>{formatPrice(total)}</span>
+        <span>{formatPrice(total, currency)}</span>
       </div>
 
       <p className="mt-8 text-xs text-ink/50">

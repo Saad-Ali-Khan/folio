@@ -1,4 +1,4 @@
-import { inArray } from "drizzle-orm";
+import { and, eq, gt, inArray } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { books } from "@/lib/db/schema";
 
@@ -26,7 +26,7 @@ export async function GET(request: Request) {
         stock: books.stock,
       })
       .from(books)
-      .where(inArray(books.id, ids));
+      .where(and(inArray(books.id, ids), eq(books.status, "published"), gt(books.priceCents, 0)));
     return Response.json({ books: rows });
   } catch (error) {
     console.error("Failed to load book availability", error);

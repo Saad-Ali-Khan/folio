@@ -9,14 +9,16 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
-    "db:setup": "tsx scripts/setup-db.ts",
+    "db:setup": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/setup-db.ts",
     "db:seed": "tsx scripts/seed.ts",
     "db:studio": "drizzle-kit studio",
     "books": "tsx scripts/books.ts",
-    "bot:discord": "tsx --env-file=.env.local scripts/discord-bot.ts"
+    "bot:discord": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/discord-bot.ts",
+    "orders": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/orders.ts"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.13",
+    "@tesseract.js-data/eng": "^1.0.0",
     "@zxing/library": "^0.23.0",
     "discord.js": "^14.28.1",
     "drizzle-orm": "^0.45.4",
@@ -26,9 +28,11 @@
     "react-dom": "19.3.0",
     "sharp": "^0.35.5",
     "stripe": "^23.0.1",
+    "tesseract.js": "^7.0.0",
     "twilio": "^6.2.0"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.5",
     "@tailwindcss/turbopack": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

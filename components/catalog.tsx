@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { connection } from "next/server";
-import { count, ilike, or } from "drizzle-orm";
+import { and, eq, gt, count, ilike, or } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { books, type Book } from "@/lib/db/schema";
 import { BookCard } from "./book-card";
@@ -40,10 +40,11 @@ export async function Catalog({ searchParams }: { searchParams: SearchParams }) 
 
   try {
     const db = await getDb();
-    const filter = query
+    const searchFilter = query
       ? or(ilike(books.title, `%${query}%`), ilike(books.author, `%${query}%`))
       : undefined;
 
+    const filter = and(eq(books.status, "published"), gt(books.priceCents, 0), searchFilter);
     const [bookRows, totalRows] = await Promise.all([
       db
         .select()

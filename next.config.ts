@@ -3,7 +3,13 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
-  serverExternalPackages: ["@electric-sql/pglite", "postgres", "twilio", "sharp"],
+  serverExternalPackages: ["@electric-sql/pglite", "postgres", "twilio", "sharp", "tesseract.js", "@tesseract.js-data/eng"],
+  outputFileTracingIncludes: {
+    "/api/discord/inventory/photo": [
+      "./node_modules/@tesseract.js-data/eng/4.0.0_best_int/eng.traineddata.gz",
+      "./node_modules/tesseract.js-core/*.wasm",
+    ],
+  },
   images: {
     remotePatterns: [
       {
@@ -17,14 +23,6 @@ const nextConfig: NextConfig = {
         pathname: "/b/id/**",
       },
     ],
-  },
-  turbopack: {
-    rules: {
-      "*.css": {
-        loaders: ["@tailwindcss/turbopack"],
-        as: "*.css",
-      },
-    },
   },
 };
 

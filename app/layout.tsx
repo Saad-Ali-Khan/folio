@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { CartProvider } from "@/components/cart-provider";
@@ -36,7 +37,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <footer className="border-t border-ink/10">
             <div className="mx-auto flex w-full max-w-6xl flex-col gap-2 px-4 py-8 text-sm text-ink/60 sm:flex-row sm:items-center sm:justify-between sm:px-6">
               <p className="font-display text-lg text-ink">Folio.</p>
-              <p>Books worth keeping. Free shipping over $35.</p>
+              <p>Books worth keeping. Delivery within Pakistan.</p>
+              <Link href="/admin" className="text-xs hover:text-accent">Manage inventory</Link>
             </div>
           </footer>
         </CartProvider>

@@ -1,8 +1,10 @@
-import type Stripe from "stripe";
-import { inArray } from "drizzle-orm";
+import { eq } from "drizzle-orm";
+import { applyCheckoutSession, CheckoutError, reserveCheckout, releaseCheckout } from "@/lib/order-service";
 import { getDb } from "@/lib/db";
-import { books } from "@/lib/db/schema";
+import { checkouts } from "@/lib/db/schema";
 import { getStripe, isStripeConfigured } from "@/lib/stripe";
+import { appOrigin } from "@/lib/admin-auth";
+import { clientKey } from "@/lib/request-limits";
 
 const MAX_QTY_PER_BOOK = 10;
 const MAX_DISTINCT_BOOKS = 50;
@@ -24,7 +26,9 @@ function parseItems(payload: unknown): IncomingItem[] | null {
     if (!Number.isInteger(qty) || qty <= 0 || qty > MAX_QTY_PER_BOOK) {
       return null;
     }
-    parsed.push({ id, qty });
+    const existing = parsed.find((item) => item.id === id);
+    if (existing) { existing.qty += qty; if (existing.qty > MAX_QTY_PER_BOOK) return null; }
+    else parsed.push({ id, qty });
   }
   return parsed;
 }
@@ -55,73 +59,52 @@ export async function POST(request: Request) {
     );
   }
 
-  const db = await getDb();
-  const rows = await db
-    .select()
-    .from(books)
-    .where(inArray(books.id, items.map((item) => item.id)));
-  const booksById = new Map(rows.map((book) => [book.id, book]));
-
-  const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
-
-  for (const item of items) {
-    const book = booksById.get(item.id);
-    if (!book) {
-      return Response.json(
-        { error: "One of the books in your cart is no longer available." },
-        { status: 409 },
-      );
-    }
-    if (book.stock < item.qty) {
-      return Response.json(
-        {
-          error:
-            book.stock === 0
-              ? `“${book.title}” is sold out.`
-              : `Only ${book.stock} copies of “${book.title}” left in stock.`,
-        },
-        { status: 409 },
-      );
-    }
-
-    lineItems.push({
-      quantity: item.qty,
-      price_data: {
-        currency: "usd",
-        unit_amount: book.priceCents,
-        product_data: {
-          name: book.title,
-          description: book.author,
-          images: book.coverUrl ? [book.coverUrl] : undefined,
-          metadata: { book_id: String(book.id) },
-        },
-      },
-    });
+  const id = (payload as { attemptId?: unknown }).attemptId;
+  if (typeof id !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(id)) {
+    return Response.json({ error: "Refresh your cart to start checkout." }, { status: 400 });
+  }
+  const origin = appOrigin(request);
+  const client = clientKey(request);
+  if (!origin || !client || (process.env.NODE_ENV === "production" && !process.env.STRIPE_WEBHOOK_SECRET)) {
+    return Response.json({ error: "Checkout is unavailable right now." }, { status: 503 });
   }
 
-  const origin =
-    process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ||
-    new URL(request.url).origin;
-
+  const db = await getDb();
+  let checkout;
   try {
-    const session = await getStripe().checkout.sessions.create({
-      mode: "payment",
-      line_items: lineItems,
-      customer_creation: "always",
-      success_url: `${origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/cart`,
-    });
-
-    if (!session.url) {
-      throw new Error("Stripe did not return a checkout URL");
-    }
-
-    return Response.json({ url: session.url });
+    checkout = await reserveCheckout(db, items, origin, { id, clientKey: client });
   } catch (error) {
-    console.error("Failed to create Stripe checkout session", error);
-    return Response.json(
-      { error: "Checkout is unavailable right now. Please try again." },
-      { status: 502 },
-    );
+    if (error instanceof CheckoutError) return Response.json({ error: error.message }, { status: error.status });
+    console.error("Checkout reservation failed", error);
+    return Response.json({ error: "Unable to reserve stock right now." }, { status: 503 });
+  }
+  try {
+    const stripe = getStripe();
+    if (!checkout.stripeSessionId && (checkout.params.expires_at ?? 0) <= Date.now() / 1000 + 1800) {
+      return Response.json({ error: "This checkout ended. Try again to start a new one." }, { status: 410 });
+    }
+    const session = checkout.stripeSessionId
+      ? await stripe.checkout.sessions.retrieve(checkout.stripeSessionId)
+      : await stripe.checkout.sessions.create(checkout.params, { idempotencyKey: checkout.id });
+    await db.update(checkouts).set({stripeSessionId:session.id}).where(eq(checkouts.id,checkout.id));
+    if (session.payment_status === "paid") {
+      return Response.json({ url: `${origin}/checkout/success?session_id=${encodeURIComponent(session.id)}` });
+    }
+    if (session.status === "expired") {
+      await applyCheckoutSession(db, session);
+      return Response.json({ error: "This checkout expired. Try again to start a new one." }, { status: 410 });
+    }
+    if (!session.url) throw new Error("Checkout URL unavailable");
+    return Response.json({url:session.url});
+  } catch(error) {
+    // Connection failures can mean Stripe created the session. Keep the hold
+    // until reconciliation proves that payment cannot still occur.
+    if (!checkout.stripeSessionId && error && typeof error === "object" && "type" in error &&
+        error.type === "StripeInvalidRequestError" && "statusCode" in error && error.statusCode === 400) {
+      await releaseCheckout(db, checkout.id);
+      return Response.json({ error: "Checkout could not start. Try again later." }, { status: 410 });
+    }
+    console.error("Checkout creation failed; reconcile reservation",checkout.id,error);
+    return Response.json({error:"Checkout could not start. Please try again later."},{status:502});
   }
 }

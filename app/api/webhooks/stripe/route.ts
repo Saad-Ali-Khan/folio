@@ -1,7 +1,7 @@
 import type Stripe from "stripe";
-import { eq, sql } from "drizzle-orm";
+import { recordRefund, releaseCheckout } from "@/lib/order-service";
+import { syncStripeCheckout } from "@/lib/checkout-recovery";
 import { getDb } from "@/lib/db";
-import { books, orderItems, orders } from "@/lib/db/schema";
 import { getStripe } from "@/lib/stripe";
 
 export async function POST(request: Request) {
@@ -29,82 +29,18 @@ export async function POST(request: Request) {
     return Response.json({ error: "Invalid signature." }, { status: 400 });
   }
 
-  if (event.type !== "checkout.session.completed") {
-    return Response.json({ received: true });
-  }
-
-  const session = event.data.object;
-  if (session.payment_status !== "paid") {
-    return Response.json({ received: true });
-  }
-
   try {
-    const lineItems = await stripe.checkout.sessions.listLineItems(session.id, {
-      expand: ["data.price.product"],
-      limit: 100,
-    });
-
-    const cart = lineItems.data.flatMap((line) => {
-      const product = line.price?.product;
-      const bookId =
-        typeof product === "object" && product !== null && "metadata" in product
-          ? Number(product.metadata?.book_id)
-          : Number.NaN;
-      const qty = line.quantity ?? 0;
-      return Number.isInteger(bookId) && bookId > 0 && qty > 0
-        ? [{ bookId, qty }]
-        : [];
-    });
-
-    const email =
-      session.customer_details?.email ?? session.customer_email ?? null;
-    const totalCents = session.amount_total ?? 0;
     const db = await getDb();
-
-    await db.transaction(async (tx) => {
-      const inserted = await tx
-        .insert(orders)
-        .values({
-          stripeSessionId: session.id,
-          email,
-          totalCents,
-          status: "paid",
-        })
-        .onConflictDoNothing({ target: orders.stripeSessionId })
-        .returning({ id: orders.id });
-
-      if (inserted.length === 0) return;
-      const orderId = inserted[0].id;
-
-      for (const item of cart) {
-        const [book] = await tx
-          .select()
-          .from(books)
-          .where(eq(books.id, item.bookId))
-          .limit(1);
-        if (!book) continue;
-
-        await tx.insert(orderItems).values({
-          orderId,
-          bookId: book.id,
-          title: book.title,
-          priceCents: book.priceCents,
-          qty: item.qty,
-        });
-
-        await tx
-          .update(books)
-          .set({ stock: sql`greatest(${books.stock} - ${item.qty}, 0)` })
-          .where(eq(books.id, book.id));
-      }
-    });
-
-    return Response.json({ received: true });
-  } catch (error) {
-    console.error("Stripe webhook handling failed", error);
-    return Response.json(
-      { error: "Webhook handling failed." },
-      { status: 500 },
-    );
+    if (event.type === "charge.refunded") {
+      await recordRefund(db, await stripe.charges.retrieve(event.data.object.id));
+    } else if (["checkout.session.completed", "checkout.session.expired", "checkout.session.async_payment_succeeded", "checkout.session.async_payment_failed"].includes(event.type)) {
+      const session = await stripe.checkout.sessions.retrieve((event.data.object as Stripe.Checkout.Session).id);
+      await syncStripeCheckout(db,stripe,session);
+      if (event.type === "checkout.session.async_payment_failed" && session.payment_status !== "paid" && session.metadata?.checkout_id) await releaseCheckout(db,session.metadata.checkout_id);
+    }
+    return Response.json({received:true});
+  } catch(error) {
+    console.error("Webhook reconciliation failed",error);
+    return Response.json({error:"Webhook handling failed."},{status:500});
   }
 }
