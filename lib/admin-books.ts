@@ -1,6 +1,7 @@
 import {and,eq,sql} from "drizzle-orm";
 import type {Database} from "./db";
 import {books} from "./db/schema";
+import { MAX_BOOK_PRICE_PKR } from "./store-policy";
 export class AdminBookError extends Error {constructor(message:string,public status=400){super(message);}}
 
 export async function deleteAdminBook(db: Database, input: unknown) {
@@ -50,15 +51,20 @@ export async function updateAdminBook(db:Database,input:unknown){
  if(!title||!author)throw new AdminBookError('Title and author are required.');
  if(!/^\d+(\.\d{1,2})?$/.test(price))throw new AdminBookError('Enter a PKR price with up to two decimal places.');
  const priceCents=Math.round(Number(price)*100);
- if(!Number.isSafeInteger(priceCents)||priceCents>100000000)throw new AdminBookError('Price is too large.');
+ if(!Number.isSafeInteger(priceCents)||priceCents>MAX_BOOK_PRICE_PKR*100)throw new AdminBookError('Price is too large.');
  const stock=raw.stock;
  if(!Number.isSafeInteger(stock)||Number(stock)<0||Number(stock)>1000000)throw new AdminBookError('Stock must be a whole number between 0 and 1,000,000.');
  if(!['draft','published'].includes(status))throw new AdminBookError('Invalid publication status.');
  if(status==='published' && (priceCents<=0 || author.toLowerCase()==='unknown author'))throw new AdminBookError('Set a positive price and a verified author before publishing.');
  const expected=raw.expected as Record<string,unknown>|undefined;
  if(!expected || typeof expected.title!=='string'||typeof expected.author!=='string'||typeof expected.description!=='string'||typeof expected.status!=='string'||!Number.isSafeInteger(expected.priceCents)||!Number.isSafeInteger(expected.stock))throw new AdminBookError('Reload this book before editing.');
+ const stockChanged = stock !== expected.stock;
+ const reason = typeof raw.stockReason === "string" ? raw.stockReason.trim() : "";
+ if (stockChanged && (!reason || reason.length > 200 || /[\u0000-\u001f\u007f]/.test(reason))) {
+  throw new AdminBookError("Enter a stock adjustment reason of up to 200 characters.");
+ }
  return db.transaction(async tx=>{
-  await tx.execute(sql`select set_config('folio.stock_reason','admin inventory edit',true)`);
+  if (stockChanged) await tx.execute(sql`select set_config('folio.stock_reason', ${`admin inventory edit: ${reason}`}, true)`);
   const [updated]=await tx.update(books).set({title,author,description,priceCents,stock:Number(stock),status})
    .where(and(eq(books.id,Number(id)),eq(books.title,expected.title as string),eq(books.author,expected.author as string),eq(books.description,expected.description as string),eq(books.priceCents,Number(expected.priceCents)),eq(books.stock,Number(expected.stock)),eq(books.status,expected.status as string))).returning();
   if(!updated)throw new AdminBookError('This book changed while you were editing. Reload the inventory and try again.',409);

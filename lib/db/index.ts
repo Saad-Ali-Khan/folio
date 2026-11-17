@@ -1,5 +1,5 @@
 import path from "node:path";
-import { eq, or, sql } from "drizzle-orm";
+import { desc, eq, or, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import * as schema from "./schema";
 
@@ -48,20 +48,25 @@ export function getDb(): Promise<Database> {
   return globalForDb.folioDb;
 }
 
-export async function findBookByIdentifier(
+export async function findBooksByIdentifier(
   db: Database,
   identifier: string,
-): Promise<schema.Book | undefined> {
-  const [book] = await db
+  limit = 2,
+): Promise<schema.Book[]> {
+  const key = identifier.toLowerCase();
+  if (key.startsWith("slug:")) {
+    return db.select().from(schema.books).where(eq(schema.books.slug, key.slice(5).trim())).limit(1);
+  }
+  const isbn = identifier.replace(/[-\s]/g, "");
+  const byIsbn = eq(schema.books.isbn, isbn);
+  const bySlug = eq(schema.books.slug, key);
+  const matches = await db
     .select()
     .from(schema.books)
-    .where(
-      or(
-        eq(schema.books.slug, identifier.toLowerCase()),
-        eq(schema.books.isbn, identifier.replace(/[-\s]/g, "")),
-        sql`lower(${schema.books.title}) = ${identifier.toLowerCase()}`,
-      ),
-    )
-    .limit(1);
-  return book;
+    .where(or(byIsbn, bySlug, sql`lower(${schema.books.title}) = ${key}`))
+    .orderBy(desc(byIsbn), desc(bySlug), schema.books.id)
+    .limit(limit);
+  const first = matches[0];
+  // A plain slug may also be the title of another edition, such as "dune".
+  return first?.isbn === isbn ? [first] : matches;
 }

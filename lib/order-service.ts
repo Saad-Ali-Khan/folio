@@ -1,13 +1,31 @@
 import { randomUUID } from "node:crypto";
 import type Stripe from "stripe";
-import { and, eq, gte, inArray, sql } from "drizzle-orm";
+import { and, eq, gte, inArray, or, sql } from "drizzle-orm";
 import type { Database } from "./db";
-import { books, checkouts, orders, orderItems, orderReturns, type CheckoutLine } from "./db/schema";
+import { books, checkouts, orders, orderItems, orderReturns, type CheckoutLine, type Order } from "./db/schema";
 import {shippingFor, STORE_CURRENCY} from "./store-policy";
 import { consumeRequestLimit } from "./request-limits";
 
 export class CheckoutError extends Error {
  constructor(message: string, public status = 409) { super(message); }
+}
+
+export async function reserveBookStock(
+  tx: Pick<Database, "execute" | "update">,
+  items: { id: number; qty: number }[],
+  reason: string,
+): Promise<CheckoutLine[]> {
+  await tx.execute(sql`select set_config('folio.stock_reason', ${reason}, true)`);
+  const lines: CheckoutLine[] = [];
+  // Stable lock order prevents deadlocks between overlapping carts.
+  for (const { id, qty } of [...items].sort((a, b) => a.id - b.id)) {
+    if (!Number.isInteger(qty) || qty < 1 || qty > 10) throw new CheckoutError("Invalid quantity", 400);
+    const [book] = await tx.update(books).set({ stock: sql`${books.stock} - ${qty}` })
+      .where(and(eq(books.id, id), eq(books.status, "published"), gte(books.priceCents, 1), gte(books.stock, qty))).returning();
+    if (!book) throw new CheckoutError("A book is unavailable or has insufficient stock. Refresh your cart.");
+    lines.push({ bookId: book.id, title: book.title, author: book.author, isbn: book.isbn, priceCents: book.priceCents, qty });
+  }
+  return lines;
 }
 
 export async function reserveCheckout(
@@ -36,16 +54,7 @@ export async function reserveCheckout(
     throw new CheckoutError("Too many checkout attempts. Try again in a few minutes.", 429);
    }
   }
-  await tx.execute(sql`select set_config('folio.stock_reason', ${'checkout reservation '+id}, true)`);
-  const lines: CheckoutLine[]=[];
-  // Stable lock order prevents deadlocks between overlapping carts.
-  for (const item of sorted) {
-   if (!Number.isInteger(item.qty) || item.qty<1 || item.qty>10) throw new CheckoutError("Invalid quantity", 400);
-   const [book]=await tx.update(books).set({stock:sql`${books.stock} - ${item.qty}`})
-    .where(and(eq(books.id,item.id),eq(books.status,'published'),gte(books.priceCents,1),gte(books.stock,item.qty))).returning();
-   if (!book) throw new CheckoutError("A book is unavailable or has insufficient stock. Refresh your cart.");
-   lines.push({bookId:book.id,title:book.title,author:book.author,isbn:book.isbn,priceCents:book.priceCents,qty:item.qty});
-  }
+  const lines = await reserveBookStock(tx, sorted, 'checkout reservation ' + id);
   const subtotal=lines.reduce((n,l)=>n+l.priceCents*l.qty,0);
   if (subtotal > 2_000_000_000) throw new CheckoutError("This order exceeds the checkout amount limit.", 400);
   const params: Stripe.Checkout.SessionCreateParams={
@@ -111,29 +120,47 @@ export async function recordRefund(db:Pick<Database,"update">,charge:Stripe.Char
  .where(and(eq(orders.paymentIntentId,intent),gte(sql`${charge.amount_refunded}`,orders.refundedCents)));
 }
 
-export async function advanceFulfillment(db:Database,id:number,next:string,tracking?:string){
+export type CodFulfillmentSnapshot = Pick<Order, "fulfillmentStatus" | "subtotalCents">;
+
+export function matchesCodFulfillment(expected: CodFulfillmentSnapshot) {
+ return and(eq(orders.paymentMethod, "cod"), eq(orders.fulfillmentStatus, expected.fulfillmentStatus),
+  eq(orders.subtotalCents, expected.subtotalCents));
+}
+
+export async function advanceFulfillment(db:Database,id:number,next:string,tracking?:string,expected?:CodFulfillmentSnapshot){
  const allowed:Record<string,string>={packed:'unfulfilled',shipped:'packed',delivered:'shipped'};
- if(!allowed[next] || (next==='shipped'&&!tracking?.trim()))throw new Error('Invalid transition or missing tracking number');
+ if(!allowed[next] || (next==='shipped'&&!tracking?.trim()))throw new CheckoutError('Invalid transition or missing tracking number.', 400);
  const [order]=await db.update(orders).set({fulfillmentStatus:next,...(next==='shipped'?{trackingNumber:tracking!.trim()}:{})})
- .where(and(eq(orders.id,id),inArray(orders.status,['paid','partially_refunded']),eq(orders.fulfillmentStatus,allowed[next]))).returning();
- if(!order)throw new Error('Order is unpaid, fully refunded, missing, or at an incompatible fulfillment stage');
+ .where(and(eq(orders.id,id),or(inArray(orders.status,['paid','partially_refunded']),
+   and(eq(orders.paymentMethod,'cod'),eq(orders.status,'cash_due'))),eq(orders.fulfillmentStatus,allowed[next]),
+   expected ? matchesCodFulfillment(expected) : undefined)).returning();
+ if(!order)throw new CheckoutError('The order changed or cannot move to that stage. Refresh orders and try again.');
  return order;
 }
 
-export async function returnItem(db:Database,orderId:number,itemId:number,qty:number,reference:string){
- if(!reference?.trim() || !Number.isInteger(qty)||qty<1)throw new Error('Invalid return quantity');
+export async function returnItem(db:Database,orderId:number,itemId:number,qty:number,reference:string,
+ expected?:CodFulfillmentSnapshot & { returnedQty: number }){
+ if(!reference?.trim() || !Number.isInteger(qty)||qty<1)throw new CheckoutError('Invalid return quantity.',400);
  await db.transaction(async tx=>{
-  const [order]=await tx.select().from(orders).where(eq(orders.id,orderId)).for('update');
-  if(!order)throw new Error('Order not found');
+  const [order]=await tx.select().from(orders).where(and(eq(orders.id,orderId),
+   expected ? matchesCodFulfillment(expected) : undefined)).for('update');
+  if(!order)throw new CheckoutError('Order missing or changed. Refresh orders before restocking.');
+  if(order.paymentMethod === 'cod' && !['returned', 'delivered'].includes(order.fulfillmentStatus)) {
+   throw new CheckoutError('Use COD cancellation for unshipped orders. Inspect shipped returns before restocking.');
+  }
+  const [line]=await tx.select({id:orderItems.id}).from(orderItems)
+   .where(and(eq(orderItems.id,itemId),eq(orderItems.orderId,orderId)));
+  if(!line)throw new CheckoutError('This item does not belong to the order.',404);
   const [claim]=await tx.insert(orderReturns).values({reference,orderItemId:itemId,qty}).onConflictDoNothing().returning();
   if(!claim){
    const [prior]=await tx.select().from(orderReturns).where(eq(orderReturns.reference,reference));
-   if(prior.orderItemId!==itemId || prior.qty!==qty)throw new Error('Return reference reused with different details');
+   if(prior.orderItemId!==itemId || prior.qty!==qty)throw new CheckoutError('A return changed. Refresh orders before restocking.');
    return;
   }
   const [item]=await tx.update(orderItems).set({returnedQty:sql`${orderItems.returnedQty}+${qty}`})
-   .where(and(eq(orderItems.id,itemId),eq(orderItems.orderId,orderId),gte(sql`${orderItems.qty}-${orderItems.returnedQty}`,qty))).returning();
-  if(!item)throw new Error('Return exceeds outstanding quantity');
+   .where(and(eq(orderItems.id,itemId),gte(sql`${orderItems.qty}-${orderItems.returnedQty}`,qty),
+    expected ? eq(orderItems.returnedQty,expected.returnedQty) : undefined)).returning();
+  if(!item)throw new CheckoutError('The return quantity changed or exceeds the remaining copies. Refresh orders and try again.');
   await tx.execute(sql`select set_config('folio.stock_reason', ${'inspected return order '+orderId}, true)`);
   await tx.update(books).set({stock:sql`${books.stock}+${qty}`}).where(eq(books.id,item.bookId));
  });

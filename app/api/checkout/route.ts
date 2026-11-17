@@ -1,110 +1,76 @@
-import { eq } from "drizzle-orm";
-import { applyCheckoutSession, CheckoutError, reserveCheckout, releaseCheckout } from "@/lib/order-service";
+import { createHash } from "node:crypto";
+import { sameOrigin } from "@/lib/admin-auth";
+import { codWhatsAppNumber, pakistaniMobile, createCodRequest } from "@/lib/cod-order";
+import { codStatusToken } from "@/lib/cod-request-status";
 import { getDb } from "@/lib/db";
-import { checkouts } from "@/lib/db/schema";
-import { getStripe, isStripeConfigured } from "@/lib/stripe";
-import { appOrigin } from "@/lib/admin-auth";
-import { clientKey } from "@/lib/request-limits";
+import { CheckoutError } from "@/lib/order-service";
+import { clientKey, consumeRequestLimit } from "@/lib/request-limits";
 
-const MAX_QTY_PER_BOOK = 10;
-const MAX_DISTINCT_BOOKS = 50;
-
-type IncomingItem = { id: number; qty: number };
-
-function parseItems(payload: unknown): IncomingItem[] | null {
-  if (typeof payload !== "object" || payload === null) return null;
-  const items = (payload as { items?: unknown }).items;
-  if (!Array.isArray(items) || items.length === 0) return null;
-  if (items.length > MAX_DISTINCT_BOOKS) return null;
-
-  const parsed: IncomingItem[] = [];
-  for (const raw of items) {
-    if (typeof raw !== "object" || raw === null) return null;
-    const id = Number((raw as { id?: unknown }).id);
-    const qty = Number((raw as { qty?: unknown }).qty);
-    if (!Number.isInteger(id) || id <= 0) return null;
-    if (!Number.isInteger(qty) || qty <= 0 || qty > MAX_QTY_PER_BOOK) {
-      return null;
-    }
-    const existing = parsed.find((item) => item.id === id);
-    if (existing) { existing.qty += qty; if (existing.qty > MAX_QTY_PER_BOOK) return null; }
-    else parsed.push({ id, qty });
+function parseItems(items: unknown) {
+  if (!Array.isArray(items) || !items.length || items.length > 50) return null;
+  const parsed = new Map<number, number>();
+  for (const item of items) {
+    if (!item || !Number.isInteger(item.id) || item.id < 1 || item.id > 2147483647 ||
+        !Number.isInteger(item.qty) || item.qty < 1 || item.qty > 10) return null;
+    const quantity = (parsed.get(item.id) ?? 0) + item.qty;
+    if (quantity > 10) return null;
+    parsed.set(item.id, quantity);
   }
-  return parsed;
+  return Array.from(parsed, ([id, qty]) => ({ id, qty }));
+}
+
+function field(value: unknown, min: number, max: number) {
+  if (typeof value !== "string" || value.length > max || /[\u0000-\u001f\u007f]/.test(value)) return null;
+  const trimmed = value.trim();
+  return trimmed.length >= min ? trimmed : null;
 }
 
 export async function POST(request: Request) {
-  if (!isStripeConfigured()) {
-    return Response.json(
-      {
-        error:
-          "Stripe is not configured. Add STRIPE_SECRET_KEY to .env and restart the server.",
-      },
-      { status: 503 },
-    );
-  }
-
-  let payload: unknown;
-  try {
-    payload = await request.json();
-  } catch {
-    return Response.json({ error: "Invalid request." }, { status: 400 });
-  }
-
-  const items = parseItems(payload);
-  if (!items) {
-    return Response.json(
-      { error: "Your cart is empty or invalid." },
-      { status: 400 },
-    );
-  }
-
-  const id = (payload as { attemptId?: unknown }).attemptId;
-  if (typeof id !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(id)) {
-    return Response.json({ error: "Refresh your cart to start checkout." }, { status: 400 });
-  }
-  const origin = appOrigin(request);
   const client = clientKey(request);
-  if (!origin || !client || (process.env.NODE_ENV === "production" && !process.env.STRIPE_WEBHOOK_SECRET)) {
-    return Response.json({ error: "Checkout is unavailable right now." }, { status: 503 });
+  if (!client || !sameOrigin(request)) return Response.json({ error: "Checkout request could not be verified." }, { status: 403 });
+  const whatsappNumber = codWhatsAppNumber();
+  if (!whatsappNumber) {
+    return Response.json({ error: "Cash on delivery is currently unavailable." }, { status: 503 });
   }
 
-  const db = await getDb();
-  let checkout;
+  const input = await request.json().catch(() => null);
+  const phone = pakistaniMobile(input?.phone);
+  const name = field(input?.name, 2, 120);
+  const line1 = field(input?.line1, 8, 200);
+  const line2 = field(input?.line2 ?? "", 0, 200);
+  const city = field(input?.city, 2, 80);
+  const items = parseItems(input?.items);
+  if (!phone || !name || !line1 || line2 === null || !city || !items) {
+    return Response.json({ error: "Enter a Pakistani mobile number, street address, and delivery city in Pakistan." }, { status: 400 });
+  }
+  const total = input.totalCents;
+  if (!Number.isSafeInteger(total) || total < 1) {
+    return Response.json({ error: "Review the order total and try again." }, { status: 422 });
+  }
+
+  const phoneKey = createHash("sha256").update(phone).digest("hex");
   try {
-    checkout = await reserveCheckout(db, items, origin, { id, clientKey: client });
+    const db = await getDb();
+    if (!await consumeRequestLimit(db, `cod:request:ip:${client}`, 15, 900) ||
+        !await consumeRequestLimit(db, `cod:request:phone:${phoneKey}`, 5, 900)) {
+      throw new CheckoutError("Too many checkout requests. Try again later.", 429);
+    }
+    const pending = await createCodRequest(db, phone, { name, address: { line1, line2, city, country: "PK" } }, items, total);
+    const message = encodeURIComponent(`I'd like to confirm Folio order request ${pending.id}.`);
+    return Response.json({
+      reference: pending.id,
+      totalCents: pending.totalCents,
+      whatsappUrl: `https://wa.me/${whatsappNumber}?text=${message}`,
+      statusToken: codStatusToken(pending.id),
+    }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     if (error instanceof CheckoutError) return Response.json({ error: error.message }, { status: error.status });
-    console.error("Checkout reservation failed", error);
-    return Response.json({ error: "Unable to reserve stock right now." }, { status: 503 });
-  }
-  try {
-    const stripe = getStripe();
-    if (!checkout.stripeSessionId && (checkout.params.expires_at ?? 0) <= Date.now() / 1000 + 1800) {
-      return Response.json({ error: "This checkout ended. Try again to start a new one." }, { status: 410 });
-    }
-    const session = checkout.stripeSessionId
-      ? await stripe.checkout.sessions.retrieve(checkout.stripeSessionId)
-      : await stripe.checkout.sessions.create(checkout.params, { idempotencyKey: checkout.id });
-    await db.update(checkouts).set({stripeSessionId:session.id}).where(eq(checkouts.id,checkout.id));
-    if (session.payment_status === "paid") {
-      return Response.json({ url: `${origin}/checkout/success?session_id=${encodeURIComponent(session.id)}` });
-    }
-    if (session.status === "expired") {
-      await applyCheckoutSession(db, session);
-      return Response.json({ error: "This checkout expired. Try again to start a new one." }, { status: 410 });
-    }
-    if (!session.url) throw new Error("Checkout URL unavailable");
-    return Response.json({url:session.url});
-  } catch(error) {
-    // Connection failures can mean Stripe created the session. Keep the hold
-    // until reconciliation proves that payment cannot still occur.
-    if (!checkout.stripeSessionId && error && typeof error === "object" && "type" in error &&
-        error.type === "StripeInvalidRequestError" && "statusCode" in error && error.statusCode === 400) {
-      await releaseCheckout(db, checkout.id);
-      return Response.json({ error: "Checkout could not start. Try again later." }, { status: 410 });
-    }
-    console.error("Checkout creation failed; reconcile reservation",checkout.id,error);
-    return Response.json({error:"Checkout could not start. Please try again later."},{status:502});
+    // Database errors can include query parameters containing customer details.
+    const cause = error instanceof Error ? error.cause : undefined;
+    const details = cause ?? error;
+    const code = details && typeof details === "object" && "code" in details &&
+      typeof details.code === "string" && /^[A-Z0-9_]{5,32}$/.test(details.code) ? details.code : undefined;
+    console.error(`COD checkout failed (${code ?? "no error code"})`);
+    return Response.json({ error: "Cash on delivery could not be completed. Please try again." }, { status: 503 });
   }
 }

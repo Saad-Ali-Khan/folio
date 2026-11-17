@@ -1,0 +1,20 @@
+{
+  "name": "folio",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-11-16",
+  "compatibility_flags": [
+    "nodejs_compat",
+    "global_fetch_strictly_public",
+    // Retain the legacy behavior for promises cached by the storefront runtime.
+    "no_handle_cross_request_promise_resolution"
+  ],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "workers_dev": true,
+  "vars": {
+    "APP_URL": "https://folio.saadalik11.workers.dev",
+    "TRUSTED_CLIENT_IP_HEADER": "CF-Connecting-IP"
+  }
+}

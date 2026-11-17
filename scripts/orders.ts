@@ -1,21 +1,45 @@
-import {eq} from 'drizzle-orm';
+import {and,count,eq,inArray} from 'drizzle-orm';
 import {setTimeout as delay} from 'node:timers/promises';
 import {createDatabase} from '../lib/db';
 import {orders,orderItems} from '../lib/db/schema';
 import {getStripe} from '../lib/stripe';
 import {advanceFulfillment,returnItem} from '../lib/order-service';
 import {reconcileCheckouts} from '../lib/checkout-recovery';
+import {cancelCodOrder, recordCodEvent} from '../lib/cod-order';
 async function main(){
  const {db,close}=await createDatabase();
  const [command,arg,extra,qty,reference]=process.argv.slice(2);
  try {
   if(command==='list') {console.table(await db.select().from(orders));return;}
-  if(command==='show') {console.table(await db.select().from(orders).where(eq(orders.id,Number(arg))));console.table(await db.select().from(orderItems).where(eq(orderItems.orderId,Number(arg))));return;}
+  if (command === 'show') {
+   const [order] = await db.select().from(orders).where(eq(orders.id, Number(arg)));
+   if (!order) throw new Error('Order not found');
+   console.table([order]);
+   console.table(await db.select().from(orderItems).where(eq(orderItems.orderId, order.id)));
+   if (order.paymentMethod === 'cod' && order.phone) {
+    const [history] = await db.select({ refusals: count() }).from(orders)
+     .where(and(eq(orders.phone, order.phone), eq(orders.paymentMethod, 'cod'),
+      inArray(orders.fulfillmentStatus, ['returning', 'returned'])));
+    console.log('Refused COD shipments for this number:', history.refusals);
+   }
+   return;
+  }
   if(['packed','shipped','delivered'].includes(command)) {await advanceFulfillment(db,Number(arg),command,extra);console.log('Fulfillment updated');return;}
   if(command==='return') {await returnItem(db,Number(arg),Number(extra),Number(qty),reference);console.log('Inspected return recorded');return;}
+  if (command === 'cod-cancel') {
+   await cancelCodOrder(db, Number(arg));
+   console.log('COD order cancelled and stock released');
+   return;
+  }
+  if (command && ['cod-refused', 'cod-returned', 'cod-collected', 'cod-remitted'].includes(command)) {
+   const amount = extra && /^\d{1,8}(\.\d{1,2})?$/.test(extra) ? Math.round(Number(extra) * 100) : undefined;
+   await recordCodEvent(db, Number(arg), command, amount, qty);
+   console.log('COD order updated');
+   return;
+  }
   if(command==='cancel-order') {
    const [order]=await db.select().from(orders).where(eq(orders.id,Number(arg)));
-   if(!order || order.refundedCents!==order.totalCents || !['unfulfilled','packed'].includes(order.fulfillmentStatus))throw new Error('Fully refund an unshipped order in Stripe before cancellation. Inspect and return its stock separately.');
+   if(!order || order.paymentMethod!=='stripe' || order.refundedCents!==order.totalCents || !['unfulfilled','packed'].includes(order.fulfillmentStatus))throw new Error('Fully refund an unshipped Stripe order before cancellation. For COD, use cod-cancel.');
    await db.update(orders).set({fulfillmentStatus:'cancelled'}).where(eq(orders.id,order.id));console.log('Cancelled');return;
   }
   if(command==='reconcile' || command==='cancel-checkout') {
@@ -46,7 +70,7 @@ async function main(){
    }
    return;
   }
-  throw new Error('Commands: list | show <order> | packed <order> | shipped <order> <tracking> | delivered <order> | return <order> <item> <qty> <unique-reference> | cancel-order <order> | reconcile | reconcile-loop | cancel-checkout <checkout-id>');
+  throw new Error('Commands: list | show <order> | packed <order> | shipped <order> <tracking> | delivered <order> | return <order> <item> <qty> <unique-reference> | cod-cancel <order> | cod-refused <order> | cod-returned <order> | cod-collected <order> <PKR> | cod-remitted <order> <net-PKR> <statement-reference> | cancel-order <order> | reconcile | reconcile-loop | cancel-checkout <checkout-id>');
  }finally{await close()}
 }
 main().catch(error=>{console.error(error);process.exitCode=1});

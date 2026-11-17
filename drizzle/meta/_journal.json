@@ -64,6 +64,20 @@
       "when": 1794483770365,
       "tag": "0008_production_guards",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794579213979,
+      "tag": "0009_cod_orders",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794580157508,
+      "tag": "0010_manual_cod_requests",
+      "breakpoints": true
     }
   ]
 }

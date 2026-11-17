@@ -14,7 +14,7 @@ export async function POST(request:Request){
  }
  let body;try{body=await request.json();}catch{return NextResponse.json({error:'Invalid request.'},{status:400});}
  if(!validAdminPin(body?.pin)){
-  return NextResponse.json({error:'Incorrect PIN.'},{status:401});
+  return NextResponse.json({error:'Incorrect admin access code.'},{status:401});
  }
  const response=NextResponse.json({authenticated:true});
  response.cookies.set(ADMIN_COOKIE,issueSession(),{httpOnly:true,sameSite:'strict',secure:process.env.NODE_ENV==='production'||new URL(request.url).protocol==='https:',maxAge:SESSION_SECONDS,path:'/api/admin'});

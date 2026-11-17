@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { readCoverLines } from "@/lib/cover-ocr";
 import { books, discordCommands } from "@/lib/db/schema";
 import { CatalogUnavailable, lookupCoverMetadata, lookupIsbnMetadata } from "@/lib/import-metadata";
-import { getDb, findBookByIdentifier } from "@/lib/db";
+import { getDb } from "@/lib/db";
 import type { InventoryVerb } from "@/lib/inventory-command";
 import {
   importDiscordBook,
@@ -129,7 +129,7 @@ export async function POST(request: Request) {
       return reply(`Decoded "${rawCode}" but it is not a book ISBN (need EAN-13 starting 978/979).`);
     }
 
-    const book = await findBookByIdentifier(db, isbn);
+    const [book] = await db.select().from(books).where(eq(books.isbn, isbn));
 
     if (book) {
       const result = await executeCommand(

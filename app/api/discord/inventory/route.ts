@@ -1,6 +1,6 @@
 import {queueTitleChoice,resolveTitleChoice} from "@/lib/title-choice";
-import { queueStockChoice, resolveStockChoice } from "@/lib/discord-stock-choice";
-import { findBookByIdentifier, getDb } from "@/lib/db";
+import { MAX_STOCK_CHOICES, queueStockChoice, resolveStockChoice } from "@/lib/discord-stock-choice";
+import { findBooksByIdentifier, getDb } from "@/lib/db";
 import { eq } from "drizzle-orm";
 import { books } from "@/lib/db/schema";
 import {
@@ -8,12 +8,14 @@ import {
   parseInventoryCommand,
 } from "@/lib/inventory-command";
 import { findBookCandidates } from "@/lib/inventory-guess";
+import { MAX_BOOK_PRICE_PKR } from "@/lib/store-policy";
 import {
   importDiscordBook,
   fetchMetadataByTitle,
   fetchMetadataByIsbn,
   executeCommand,
   secureEqual,
+  AmbiguousInventoryTitle,
 } from "@/lib/discord-inventory";
 
 type DiscordCommand = {
@@ -23,6 +25,8 @@ type DiscordCommand = {
   text?: string;
   titleChoice?: { id?: unknown; selection?: unknown };
 };
+
+const ambiguousTitle = "Multiple editions match. Use the edition’s ISBN or prefix its slug with slug:.";
 
 function reply(text: string | null) {
   return Response.json({ reply: text });
@@ -72,6 +76,7 @@ export async function POST(request: Request) {
     try {
       return Response.json(await resolveTitleChoice(await getDb(), id, channelId, body.userId, selection));
     } catch (error) {
+      if (error instanceof AmbiguousInventoryTitle) return Response.json({ reply: error.message });
       console.error("Discord title choice failed", error);
       return reply("Could not save that title choice. Try again.");
     }
@@ -96,7 +101,8 @@ export async function POST(request: Request) {
     }
     if(action === "TITLE") return Response.json(await resolveTitleChoice(db,rest[1]??"",channelId,body?.userId??"",(rest[2]??"").toUpperCase()));
     if(action === "TITLES") {
-      const target=await findBookByIdentifier(db,rest.slice(1).join(" "));
+      const [target, other] = await findBooksByIdentifier(db, rest.slice(1).join(" "));
+      if (other) return reply(ambiguousTitle);
       if(!target)return reply("Book not found. Use the ISBN or exact slug.");
       const meta=await fetchMetadataByIsbn(target.isbn);
       if(!meta)return reply("Title lookup unavailable; edit the title manually in inventory.");
@@ -105,12 +111,15 @@ export async function POST(request: Request) {
     }
     if (["PRICE", "PUBLISH", "DRAFT"].includes(action)) {
       const identifier = rest.slice(1, action === "PRICE" ? -1 : undefined).join(" ");
-      const target = await findBookByIdentifier(db, identifier);
+      const [target, other] = await findBooksByIdentifier(db, identifier);
+      if (other) return reply(ambiguousTitle);
       if (!target) return reply("No matching book. Use its ISBN or slug.");
       if (action === "PRICE") {
         const amount = rest.at(-1) ?? "";
-        if (!/^\d+(\.\d{1,2})?$/.test(amount) || Number(amount) <= 0 || Number(amount) > 100000) return reply("Use PRICE <isbn|slug> <amount>, e.g. PRICE dune 14.99.");
-        await db.update(books).set({priceCents: Math.round(Number(amount)*100)}).where(eq(books.id,target.id));
+        const price = Number(amount);
+        if (!/^\d+(\.\d{1,2})?$/.test(amount) || price <= 0) return reply("Use PRICE <isbn|slug> <amount>, e.g. PRICE dune 14.99.");
+        if (price > MAX_BOOK_PRICE_PKR) return reply(`The maximum book price is Rs ${MAX_BOOK_PRICE_PKR.toLocaleString("en-PK")}.`);
+        await db.update(books).set({priceCents: Math.round(price*100)}).where(eq(books.id,target.id));
         return reply("Price updated. Publish the book when ready.");
       }
       if (action === "PUBLISH" && (target.priceCents <= 0 || !target.title.trim() || target.author === "Unknown author")) return reply("Set a positive price and review title/author before publishing.");
@@ -121,7 +130,11 @@ export async function POST(request: Request) {
     if (!command) return reply(INVENTORY_HELP);
 
     const identifier = command.identifier.trim();
-    const book = await findBookByIdentifier(db, identifier);
+    const exact = await findBooksByIdentifier(db, identifier, MAX_STOCK_CHOICES + 1);
+    const source = { messageId, channelId, userId: body?.userId ?? "" };
+    if (exact.length > MAX_STOCK_CHOICES) return reply(ambiguousTitle);
+    if (exact.length > 1) return reply(await queueStockChoice(db, source, command, exact));
+    const [book] = exact;
 
     if (book) {
       const result = await executeCommand(
@@ -134,6 +147,7 @@ export async function POST(request: Request) {
       );
       return reply(result);
     }
+    if (identifier.toLowerCase().startsWith("slug:")) return reply("No book uses that slug.");
 
     const candidates = findBookCandidates(
       await db.select().from(books),
@@ -141,7 +155,7 @@ export async function POST(request: Request) {
     );
 
     if (candidates.length > 0) {
-      return reply(await queueStockChoice(db, { messageId, channelId, userId: body?.userId ?? "" }, command, candidates));
+      return reply(await queueStockChoice(db, source, command, candidates));
     }
 
     if (command.verb === "ADD") {
@@ -157,6 +171,7 @@ export async function POST(request: Request) {
 
     return reply(`No book matches "${identifier}".`);
   } catch (error) {
+    if (error instanceof AmbiguousInventoryTitle) return reply(error.message);
     console.error("Inventory Discord update failed", error);
     return new Response("Inventory update failed.", { status: 500 });
   }

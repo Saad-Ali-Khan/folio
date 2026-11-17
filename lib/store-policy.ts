@@ -1,4 +1,5 @@
 export const STORE_CURRENCY = "pkr";
+export const MAX_BOOK_PRICE_PKR = 1_000_000;
 // Integer minor units (100 paisa = 1 rupee). Shared by cart and server checkout.
 export const SHIPPING_FEE = 25_000;
 export const FREE_SHIPPING_AT = 500_000;

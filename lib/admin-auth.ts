@@ -35,7 +35,7 @@ export function validSession(token:string|undefined,now=Date.now()) {
  return equal(sig,signature(expires));
 }
 export function appOrigin(request: Request): string | null {
- const configured = process.env.NEXT_PUBLIC_APP_URL;
+ const configured = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL;
  try {
   const url = new URL(configured || request.url);
   if (process.env.NODE_ENV === 'production' && (!configured || url.protocol !== 'https:')) return null;
@@ -45,8 +45,14 @@ export function appOrigin(request: Request): string | null {
  }
 }
 export function sameOrigin(request:Request){
- const origin = process.env.NODE_ENV === 'production' ? appOrigin(request) : new URL(request.url).origin;
- return origin !== null && request.headers.get('origin') === origin;
+ const supplied = request.headers.get('origin');
+ if (!supplied) return false;
+ if (process.env.NODE_ENV === 'production') return supplied === appOrigin(request);
+
+ const url = new URL(request.url);
+ // Next.js dev can normalize the request URL to localhost even on 127.0.0.1.
+ const host = request.headers.get('host') ?? url.host;
+ return supplied === `${url.protocol}//${host}`;
 }
 export function requestIsAdmin(request:Request){
  const cookie=request.headers.get('cookie')?.split(';').map(v=>v.trim()).find(v=>v.startsWith(`${ADMIN_COOKIE}=`))?.slice(ADMIN_COOKIE.length+1);

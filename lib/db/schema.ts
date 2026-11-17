@@ -16,8 +16,14 @@ export const books = pgTable("books", {
 
 export const orders = pgTable("orders", {
   id: serial("id").primaryKey(),
-  stripeSessionId: text("stripe_session_id").notNull().unique(),
+  stripeSessionId: text("stripe_session_id").unique(),
   checkoutId: text("checkout_id").unique(),
+  paymentMethod: text("payment_method").notNull().default("stripe"),
+  phone: text("phone"),
+  collectedAt: timestamp("collected_at", { withTimezone: true }),
+  remittedAt: timestamp("remitted_at", { withTimezone: true }),
+  remittanceReference: text("remittance_reference"),
+  remittedCents: integer("remitted_cents"),
   currency: text("currency").notNull().default("pkr"),
   subtotalCents: integer("subtotal_cents").notNull().default(0),
   shippingCents: integer("shipping_cents").notNull().default(0),
@@ -31,6 +37,21 @@ export const orders = pgTable("orders", {
   status: text("status").notNull().default("paid"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+export const codRequests = pgTable("cod_requests", {
+  id: text("id").primaryKey(),
+  phone: text("phone").notNull(),
+  delivery: jsonb("delivery").$type<CodDelivery>().notNull(),
+  lines: jsonb("lines").$type<CheckoutLine[]>().notNull(),
+  totalCents: integer("total_cents").notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  orderId: integer("order_id").references(() => orders.id),
+});
+
+export type CodDelivery = {
+  name: string;
+  address: { line1: string; line2: string; city: string; country: "PK" };
+};
 
 export const orderItems = pgTable("order_items", {
   id: serial("id").primaryKey(),

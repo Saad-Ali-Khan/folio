@@ -4,82 +4,55 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
+  useState,
   useSyncExternalStore,
   type ReactNode,
 } from "react";
+import {
+  EMPTY_CART, parseCart, resizeCartLine, resolveCartRequest,
+  type CartItem, type CartLine, type CartState, type TrackedCodRequest,
+} from "@/lib/cart-state";
 
-export type CartItem = {
-  id: number;
-  slug: string;
-  title: string;
-  author: string;
-  priceCents: number;
-  coverUrl: string | null;
-  qty: number;
-};
+export type { CartItem } from "@/lib/cart-state";
 
 type CartContextValue = {
-  items: CartItem[];
+  items: CartLine[];
   ready: boolean;
   count: number;
+  approvedReference: string | null;
   add: (book: Omit<CartItem, "qty">, qty?: number) => void;
   setQty: (id: number, qty: number) => void;
   remove: (id: number) => void;
   clear: () => void;
+  trackCodRequest: (request: TrackedCodRequest) => Promise<void>;
 };
 
 const CartContext = createContext<CartContextValue | null>(null);
 
 const STORAGE_KEY = "folio.cart.v1";
 const CHANGE_EVENT = "folio:cart-change";
-const MAX_QTY = 10;
-const EMPTY_CART: CartItem[] = [];
 
-function isCartItem(value: unknown): value is CartItem {
-  if (typeof value !== "object" || value === null) return false;
-  const item = value as Partial<CartItem>;
-  return (
-    typeof item.id === "number" &&
-    typeof item.slug === "string" &&
-    typeof item.title === "string" &&
-    typeof item.author === "string" &&
-    typeof item.priceCents === "number" &&
-    (typeof item.coverUrl === "string" || item.coverUrl === null) &&
-    typeof item.qty === "number" &&
-    item.qty > 0
-  );
-}
-
-function parseCart(raw: string | null): CartItem[] {
-  if (!raw) return EMPTY_CART;
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.filter(isCartItem) : EMPTY_CART;
-  } catch {
-    return EMPTY_CART;
-  }
-}
-
-let cache: { raw: string | null; items: CartItem[] } = {
+let cache: { raw: string | null; state: CartState } = {
   raw: null,
-  items: EMPTY_CART,
+  state: EMPTY_CART,
 };
 
-function getSnapshot(): CartItem[] {
+function getSnapshot(): CartState {
   let raw: string | null = null;
   try {
     raw = window.localStorage.getItem(STORAGE_KEY);
   } catch {
     return EMPTY_CART;
   }
-  if (raw === cache.raw) return cache.items;
-  const items = parseCart(raw);
-  cache = { raw, items };
-  return items;
+  if (raw === cache.raw) return cache.state;
+  const state = parseCart(raw);
+  cache = { raw, state };
+  return state;
 }
 
-function getServerSnapshot(): CartItem[] {
+function getServerSnapshot(): CartState {
   return EMPTY_CART;
 }
 
@@ -92,17 +65,35 @@ function subscribe(callback: () => void): () => void {
   };
 }
 
-function writeCart(items: CartItem[]) {
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-  } catch {
-    return;
+async function mutateCart(update: (state: CartState) => CartState): Promise<boolean> {
+  function commit() {
+    const current = getSnapshot();
+    const next = update(current);
+    if (next === current) return false;
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      return false;
+    }
+    window.dispatchEvent(new Event(CHANGE_EVENT));
+    return true;
   }
-  window.dispatchEvent(new Event(CHANGE_EVENT));
+
+  // Serialize edits and approval reconciliation across tabs when supported.
+  return navigator.locks ? navigator.locks.request(STORAGE_KEY, commit) : commit();
 }
 
-function clampQty(qty: number): number {
-  return Math.min(Math.max(Math.trunc(qty), 1), MAX_QTY);
+async function checkRequest({ reference, token }: TrackedCodRequest, signal: AbortSignal) {
+  const response = await fetch("/api/checkout/status", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ reference, token }),
+    signal: AbortSignal.any([signal, AbortSignal.timeout(10_000)]),
+  });
+  if (response.status === 404) return "closed";
+  if (!response.ok) return "pending";
+  const result: { status?: unknown } | null = await response.json();
+  return result?.status;
 }
 
 function useHydrated(): boolean {
@@ -118,40 +109,77 @@ function emptySubscribe(): () => void {
 }
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const items = useSyncExternalStore(
+  const { items } = useSyncExternalStore(
     subscribe,
     getSnapshot,
     getServerSnapshot,
   );
   const ready = useHydrated();
+  const [approvedReference, setApprovedReference] = useState<string | null>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    let checking = false;
+
+    async function reconcile() {
+      if (checking || document.hidden) return;
+      const { requests } = getSnapshot();
+      if (!requests.length) return;
+      checking = true;
+      try {
+        await Promise.allSettled(requests.map(async request => {
+          const status = await checkRequest(request, controller.signal);
+          if (controller.signal.aborted || (status !== "approved" && status !== "closed")) return;
+          const applied = await mutateCart(state => resolveCartRequest(state, request.reference, status === "approved"));
+          if (applied && status === "approved" && !controller.signal.aborted) setApprovedReference(request.reference);
+        }));
+      } finally {
+        checking = false;
+      }
+    }
+
+    void reconcile();
+    const timer = window.setInterval(reconcile, 15_000);
+    window.addEventListener("focus", reconcile);
+    document.addEventListener("visibilitychange", reconcile);
+    return () => {
+      controller.abort();
+      window.clearInterval(timer);
+      window.removeEventListener("focus", reconcile);
+      document.removeEventListener("visibilitychange", reconcile);
+    };
+  }, []);
 
   const add = useCallback((book: Omit<CartItem, "qty">, qty = 1) => {
-    const current = getSnapshot();
-    const existing = current.find((item) => item.id === book.id);
-    const next = existing
-      ? current.map((item) =>
-          item.id === book.id
-            ? { ...item, qty: clampQty(item.qty + qty) }
-            : item,
-        )
-      : [...current, { ...book, qty: clampQty(qty) }];
-    writeCart(next);
+    void mutateCart(state => {
+      const existing = state.items.find(item => item.id === book.id);
+      const items = existing
+        ? state.items.map(item => item === existing ? resizeCartLine(item, item.qty + qty) : item)
+        : [...state.items, resizeCartLine({ ...book, qty: 0, copyIds: [] }, qty)];
+      return { ...state, items };
+    });
   }, []);
 
   const setQty = useCallback((id: number, qty: number) => {
-    writeCart(
-      getSnapshot().map((item) =>
-        item.id === id ? { ...item, qty: clampQty(qty) } : item,
-      ),
-    );
+    void mutateCart(state => ({
+      ...state,
+      items: state.items.map(item => item.id === id ? resizeCartLine(item, qty) : item),
+    }));
   }, []);
 
   const remove = useCallback((id: number) => {
-    writeCart(getSnapshot().filter((item) => item.id !== id));
+    void mutateCart(state => ({ ...state, items: state.items.filter(item => item.id !== id) }));
   }, []);
 
   const clear = useCallback(() => {
-    writeCart([]);
+    void mutateCart(state => ({ ...state, items: [] }));
+  }, []);
+
+  const trackCodRequest = useCallback(async (request: TrackedCodRequest) => {
+    await mutateCart(state => ({
+      ...state,
+      requests: [...state.requests.filter(entry => entry.reference !== request.reference), request],
+    }));
   }, []);
 
   const count = useMemo(
@@ -160,8 +188,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo(
-    () => ({ items, ready, count, add, setQty, remove, clear }),
-    [items, ready, count, add, setQty, remove, clear],
+    () => ({ items, ready, count, approvedReference, add, setQty, remove, clear, trackCodRequest }),
+    [items, ready, count, approvedReference, add, setQty, remove, clear, trackCodRequest],
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

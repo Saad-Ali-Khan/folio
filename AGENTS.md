@@ -7,3 +7,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+## Folio design documentation
+
+Keep [the architecture knowledge base](docs/architecture.md) current in the same change as updates to the frontend architecture, data flows, authentication, integrations, or deployment. Record the reason and operational impact of significant design decisions. Track proposed work and unresolved issues in [BACKLOG.md](BACKLOG.md).

@@ -1,15 +1,71 @@
 # Folio
 
-A small independent bookstore: browse and search a seeded catalog, add books to a
-cart, and pay through Stripe Checkout. Guest checkout only — no accounts, no
-admin UI.
+A small independent bookstore with a searchable catalog, inventory admin, and
+cash on delivery checkout with manual WhatsApp confirmation.
+
+## Knowledge base
+
+- [Architecture and design decisions](docs/architecture.md)
+- [Backlog and business rules under review](BACKLOG.md)
 
 ## Stack
 
 - Next.js 16 (App Router, Cache Components, Partial Prerendering) + React 19
 - TypeScript, Tailwind CSS v4
 - Drizzle ORM on Postgres (postgres.js), with embedded PGlite for local dev
-- Stripe Checkout + signed webhooks
+- WhatsApp Business click to chat for COD requests
+
+## Cash on delivery
+
+Run `npm run db:setup`. Set `COD_WHATSAPP_NUMBER` to the shop's WhatsApp
+Business number in international format and restart Folio. Checkout accepts
+delivery addresses nationwide in Pakistan. Customers enter their city or town,
+and the shop reviews the address during WhatsApp approval. The shipping fee is
+Rs 250 below a Rs 5,000 book subtotal and free at Rs 5,000 or more.
+
+Customers enter a Pakistan delivery address and send the request reference
+from their WhatsApp number. In `/admin`, unlock inventory and select **Load
+requests** under **COD requests**. Review the address and cart, then enter the
+reference and sender number from the incoming message. Approval creates the
+order and reserves stock. Requests expire after 24 hours. An approved follow-up
+for the same WhatsApp number, name, and address adds books to the existing
+unshipped order. Shipping is recalculated from the combined book subtotal. A
+packed order goes back to the packing queue. After dispatch, wait for delivery
+or return before approving another request. Reply on WhatsApp with the order
+number and the confirmed total.
+
+When the customer returns to Folio in the same browser, the cart checks for
+approval and removes the purchased copies. Copies added after submission stay
+in the cart. Pending or expired requests preserve the cart.
+
+Use **COD fulfillment** in `/admin` to review active orders and their items,
+delivery details, and totals. Mark orders packed, shipped, and delivered in
+sequence. Enter the courier tracking number when marking an order shipped.
+Cancel an unshipped order from the same section to release its copies back to
+available stock. Use **Mark refused** for a shipped parcel the buyer refuses,
+then **Mark return received** when the parcel is back. Inspect the books and
+use **Restock copies** for the resellable quantity on each order line. Use
+**Find by order number** to reopen a returned or delivered order later. The
+order commands remain available for terminal use.
+
+```bash
+npm run orders -- list
+npm run orders -- show ORDER_ID
+npm run orders -- packed ORDER_ID
+npm run orders -- shipped ORDER_ID TRACKING_NUMBER
+npm run orders -- delivered ORDER_ID
+npm run orders -- cod-collected ORDER_ID COLLECTED_PKR
+npm run orders -- cod-remitted ORDER_ID NET_PAYOUT_PKR STATEMENT_REFERENCE
+```
+
+Match the courier statement to the tracking number before recording a payout.
+Use `cod-cancel ORDER_ID` before dispatch to restore stock. For a refused
+shipment, use `cod-refused ORDER_ID`, then `cod-returned ORDER_ID` once the
+parcel is back. Use the existing `return` command for each inspected,
+resellable item. Stop the dev server before running CLI commands on PGlite.
+
+The Stripe instructions below cover historical Stripe payments and outstanding
+reservations from before the switch to cash on delivery.
 
 ## Quick start
 
@@ -568,7 +624,8 @@ webhook listener.
 ## Inventory management page
 
 Open http://localhost:3000/admin or select **Manage inventory** in the footer.
-Unlock it with your existing Discord inventory PIN. The page shows drafts,
+On the live site, unlock it with the admin access code set during deployment.
+The page shows drafts,
 published books, search by title/author/ISBN, and an editor for title, author,
 description, PKR price, available copies, and publication status. No server
 restart is needed when saving. New books received through Discord appear after
@@ -580,12 +637,17 @@ Stock changes are audited; conflicting edits are rejected rather than overwritin
 changes made by checkout or Discord. ISBN and slug are shown read-only to keep
 edition identity stable.
 
+Open an edition's editor and choose **Load history** under **Stock history**
+to review the date, quantity before and after the change, and reason. Changing
+**Available copies** in the editor requires an adjustment reason.
+
 Admin API reads and writes require a signed, HttpOnly eight-hour session. Writes
-also require a matching Origin. Five incorrect PIN attempts temporarily block
-login. **Lock inventory** clears the current browser session. By default the
-server uses INVENTORY_DISCORD_PIN and INVENTORY_DISCORD_SECRET; set ADMIN_PIN and
-ADMIN_SESSION_SECRET for separate credentials (then restart the app). Changing
-the PIN or secret invalidates existing sessions. Use HTTPS when hosting it.
+also require a matching Origin. Five login attempts per IP per minute are allowed.
+**Lock inventory** clears the current browser session. Production requires its
+own `ADMIN_PIN` and `ADMIN_SESSION_SECRET`. Local development falls back to
+`INVENTORY_DISCORD_PIN` and `INVENTORY_DISCORD_SECRET` when the corresponding
+admin setting is missing. Changing the access code or session secret invalidates
+existing sessions. Use HTTPS when hosting it.
 
 Run `npx tsx scripts/test-admin.ts` to test admin validation and auth against an
 isolated database.
@@ -644,6 +706,25 @@ Test with `npx tsx scripts/test-title-choice.ts` and `npx tsx scripts/test-disco
 
 ## Staging and production setup
 
+### Cloudflare Workers
+
+Run `npm run build:cloudflare` from the repository root on Linux to create
+the Worker bundle and Wrangler config. Once Wrangler is authenticated and the
+Worker secrets are configured, run `npm run deploy:cloudflare` to build and
+publish a new version from the same directory.
+The Cloudflare build serves the storefront, checkout, and admin. Run the
+Discord bot and its Folio photo API locally against the same PostgreSQL
+database.
+
+Set `DATABASE_URL` to the pooled Neon URL, and set `ADMIN_PIN`,
+`ADMIN_SESSION_SECRET`, and `COD_WHATSAPP_NUMBER` as Worker secrets.
+`deploy/cloudflare/wrangler.jsonc` sets the preview origin and trusted IP
+header. Update the origin when switching to a
+custom domain. Apply migrations with `npm run db:setup` separately from
+the Worker deployment.
+
+### Node server
+
 Use Node.js 22.9 or later and a dedicated PostgreSQL database for each environment.
 Set `DATABASE_URL` and the HTTPS `NEXT_PUBLIC_APP_URL` before building and starting
 the app. Run `npm run db:setup` before deploying. Pending migrations and their
@@ -660,8 +741,10 @@ Checkout and admin login require this header in production.
 
 When Discord suggests an edition for an ambiguous inventory command, the
 requester replies with `<PIN> CONFIRM <code> <number>` in the same channel.
-Use `CANCEL` in place of the number to cancel. Exact ISBN and slug commands
-still run directly.
+Use `CANCEL` in place of the number to cancel. An ISBN or an unambiguous slug
+runs directly. If a slug is also a shared title, use `slug:<slug>` to select it
+explicitly, for example `<PIN> SOLD slug:dune 1`. Price, visibility, and title
+commands also require a unique match.
 
 For Stripe staging, configure test credentials and the signed webhook, then
 start the web app, Discord bot, and `npm run orders -- reconcile-loop` under

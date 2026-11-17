@@ -134,6 +134,10 @@ export async function logScan(
   return Boolean(logged);
 }
 
+export class AmbiguousInventoryTitle extends Error {
+ constructor() { super("Multiple editions match that title. Use the edition’s ISBN or prefix its slug with slug:."); }
+}
+
 export async function importDiscordBook(db: Database, messageId: string, channelId: string, meta: BookMetadata, qty: number) {
  const editionKey = inventoryEditionKey(meta);
  return db.transaction(async tx => {
@@ -141,7 +145,9 @@ export async function importDiscordBook(db: Database, messageId: string, channel
   if (!claim) return null;
   // Serialize imports of the same edition across different Discord messages.
   await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${editionKey ?? meta.title.toLowerCase()}))`);
-  const [existing] = await tx.select().from(books).where(editionKey ? eq(books.isbn, editionKey) : sql`lower(${books.title}) = ${meta.title.toLowerCase()}`).limit(1);
+  const [existing, other] = await tx.select().from(books)
+   .where(editionKey ? eq(books.isbn, editionKey) : sql`lower(${books.title}) = ${meta.title.toLowerCase()}`).limit(2);
+  if (other) throw new AmbiguousInventoryTitle();
   if (existing) {
    const [updated] = await tx.update(books).set({stock: sql`${books.stock} + ${qty}`})
      .where(and(eq(books.id, existing.id), meta.coverWorkId ? eq(books.status, "draft") : undefined))

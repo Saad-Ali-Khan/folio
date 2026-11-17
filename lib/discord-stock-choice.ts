@@ -5,6 +5,8 @@ import { books, discordStockChoices, type Book } from "./db/schema";
 import { executeCommand } from "./discord-inventory";
 import type { InventoryVerb } from "./inventory-command";
 
+export const MAX_STOCK_CHOICES = 5;
+
 export async function queueStockChoice(
   db: Database,
   source: { messageId: string; userId: string; channelId: string },
@@ -23,7 +25,10 @@ export async function queueStockChoice(
     expiresAt: new Date(Date.now() + 5 * 60 * 1000),
   }).onConflictDoNothing().returning({ id: discordStockChoices.id });
   if (!choice) return "This command already has a confirmation request. Use the original prompt or send a new command.";
-  const list = candidates.map((book, index) => `${index + 1}. ${book.title} (${book.slug})`).join("\n");
+  const list = candidates.map((book, index) => {
+    const isbn = book.isbn.startsWith("manual-") ? "ISBN unverified" : `ISBN ${book.isbn.slice(0, 30)}`;
+    return `${index + 1}. ${book.title.slice(0, 120)} (${book.slug.slice(0, 90)}) · ${isbn}`;
+  }).join("\n");
   return `Which book did you mean?\n${list}\nReply with your PIN followed by CONFIRM ${choice.id} and the book number. To cancel, use CONFIRM ${choice.id} CANCEL. The choice expires in 5 minutes.`;
 }
 

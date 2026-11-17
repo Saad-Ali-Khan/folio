@@ -1,7 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 import twilio from "twilio";
-import { findBookByIdentifier, getDb } from "@/lib/db";
+import { findBooksByIdentifier, getDb } from "@/lib/db";
 import { books, smsCommands } from "@/lib/db/schema";
 import {
   INVENTORY_HELP,
@@ -110,7 +110,9 @@ export async function POST(request: Request) {
 
   try {
     const db = await getDb();
-    const book = await findBookByIdentifier(db, identifier);
+    const [book, other] = await findBooksByIdentifier(db, identifier);
+
+    if (other) return reply("Multiple editions match. Use the edition's ISBN or prefix its slug with slug:.");
 
     if (!book) {
       return reply(`No book matches "${identifier}".`);
