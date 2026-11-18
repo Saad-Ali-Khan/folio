@@ -8,7 +8,9 @@
 
 ### Checkout and customer orders
 
-- [ ] **Site-initiated WhatsApp confirmations.** The local admin test message reached the phone, and Meta’s signed dashboard callback returned HTTP 200 on Cloudflare. The private checkout test reached Meta, which rejected the expired or invalid test token. Refresh the token and verify delivery to the phone. Public checkout uses the manual WhatsApp flow. A separate production number and approved utility template are future steps.
+- [x] **Private WhatsApp checkout test.** Meta accepted the message, and the test recipient confirmed delivery on November 18, 2026. The duplicate checkout submission was blocked, and the test created no COD request or stock change. Meta’s signed dashboard callback returned HTTP 200 on Cloudflare.
+
+- [ ] **Site-initiated WhatsApp confirmations for live orders.** Public checkout uses the manual WhatsApp flow. Register the separate production number, get the COD utility template approved, and connect live checkout and customer replies.
 
 - [ ] **Live COD smoke test.** Automated checks pass for approval and stock, cart cleanup, repeat requests, nationwide checkout, and the shipping threshold. Verify those behaviors with a controlled order on the deployed storefront.
 
