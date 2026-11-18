@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { formatPrice } from "@/lib/format";
 import { useCart } from "@/components/cart-provider";
 
@@ -16,6 +16,17 @@ export function CodCheckout({ items, copyIds, total, onChanged }: {
   const [pending, setPending] = useState<{ reference: string; whatsappUrl: string }>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [testAvailable, setTestAvailable] = useState(false);
+  const [testSelected, setTestSelected] = useState(false);
+  const [testSent, setTestSent] = useState(false);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetch("/api/admin/whatsapp/test", { signal: controller.signal }).then(async response => {
+      if (response.ok) setTestAvailable((await response.json()).configured === true);
+    }).catch(() => {});
+    return () => controller.abort();
+  }, []);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -23,8 +34,10 @@ export function CodCheckout({ items, copyIds, total, onChanged }: {
     const fields = Object.fromEntries(new FormData(event.currentTarget));
     setBusy(true);
     setError("");
+    setTestSent(false);
     try {
-      const response = await fetch("/api/checkout", {
+      const endpoint = testSelected ? "/api/admin/whatsapp/checkout" : "/api/checkout";
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -35,6 +48,10 @@ export function CodCheckout({ items, copyIds, total, onChanged }: {
       if (!response.ok) {
         if (response.status === 409) onChanged();
         throw new Error(result.error ?? "Checkout is unavailable. Try again.");
+      }
+      if (result.whatsappTest === true && result.accepted === true) {
+        setTestSent(true);
+        return;
       }
       if (typeof result.reference === "string" && typeof result.whatsappUrl === "string") {
         if (typeof result.statusToken === "string") {
@@ -86,9 +103,19 @@ export function CodCheckout({ items, copyIds, total, onChanged }: {
           <input className={fieldClass} name="phone" type="tel" autoComplete="tel" placeholder="03XX XXXXXXX"
             maxLength={30} required />
         </label>
+        {testAvailable && (
+          <label className="flex items-start gap-2 text-sm">
+            <input className="mt-1" type="checkbox" checked={testSelected} onChange={event => {
+              setTestSelected(event.target.checked);
+              setTestSent(false);
+            }} />
+            Send a private WhatsApp test from checkout. This leaves the cart and stock unchanged and creates no order.
+          </label>
+        )}
+        {testSent && <p role="status" className="text-sm text-accent">Meta accepted the sample message. Check your WhatsApp inbox.</p>}
         {error && <p role="alert" className="rounded bg-red-50 p-3 text-sm text-red-700">{error}</p>}
         <button className="w-full rounded-full bg-ink px-4 py-3 text-sm font-medium text-cream hover:bg-accent disabled:bg-ink/30">
-          {busy ? "Please wait…" : `Prepare COD request · ${formatPrice(total)}`}
+          {busy ? "Please wait…" : testSelected ? "Send WhatsApp test" : `Prepare COD request · ${formatPrice(total)}`}
         </button>
       </fieldset>
     </form>

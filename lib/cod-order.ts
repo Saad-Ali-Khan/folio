@@ -18,9 +18,8 @@ export function pakistaniMobile(value: unknown) {
   return match ? `+92${match[1]}` : null;
 }
 
-export async function createCodRequest(
-  db: Database, phone: string, delivery: CodDelivery,
-  items: { id: number; qty: number }[], expectedTotal: number,
+export async function quoteCodRequest(
+  db: Database, items: { id: number; qty: number }[], expectedTotal: number,
 ) {
   const available = await db.select().from(books)
     .where(and(inArray(books.id, items.map(item => item.id)), eq(books.status, "published")));
@@ -34,7 +33,14 @@ export async function createCodRequest(
   const totalCents = subtotal + shippingFor(subtotal);
   if (totalCents > MAX_STORED_TOTAL) throw new CheckoutError("This order total is too large to process.", 422);
   if (totalCents !== expectedTotal) throw new CheckoutError("The order total changed. Review the updated cart and try again.");
+  return { lines, totalCents };
+}
 
+export async function createCodRequest(
+  db: Database, phone: string, delivery: CodDelivery,
+  items: { id: number; qty: number }[], expectedTotal: number,
+) {
+  const { lines, totalCents } = await quoteCodRequest(db, items, expectedTotal);
   // An approved amendment needs its request row to remain linked to the order.
   await db.delete(codRequests).where(and(
     lt(codRequests.expiresAt, new Date(Date.now() - 86_400_000)),

@@ -67,6 +67,28 @@ resellable item. Stop the dev server before running CLI commands on PGlite.
 The Stripe instructions below cover historical Stripe payments and outstanding
 reservations from before the switch to cash on delivery.
 
+## WhatsApp test setup
+
+Use Meta’s test number and a recipient already verified in **Step 1. Try it
+out**. Set `WHATSAPP_TEST_PHONE_NUMBER_ID`, `WHATSAPP_TEST_ACCESS_TOKEN`, and
+`WHATSAPP_TEST_RECIPIENT` in local `.env.local` or as Cloudflare Worker secrets.
+Use international format for the recipient. Sign in to admin and click **Send
+test message** under **WhatsApp test**. The sender uses Meta’s sample template.
+
+To test checkout, stay signed in to admin, add a book to your cart, and
+enter the configured Pakistani test number in the COD form. Select **Send a
+private WhatsApp test from checkout** and click **Send WhatsApp test**. The
+test validates stock and the total, then sends Meta's sample directly to
+the phone. The cart, stock, and order history stay unchanged. Identical
+test carts can attempt one send per recipient every 15 minutes.
+
+For callback testing, set `WHATSAPP_APP_SECRET` to the Meta App Secret and
+`WHATSAPP_WEBHOOK_VERIFY_TOKEN` to a separately generated random value. After
+deploying the route, enter the live site’s `/api/webhooks/whatsapp` URL and the
+same verify token in Meta’s webhook configuration. Subscribe to `messages` and
+send a dashboard test event. The Worker verifies the callback signature and
+logs a generic receipt. Customer checkout still uses the manual WhatsApp link.
+
 ## Quick start
 
 ```bash

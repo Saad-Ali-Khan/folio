@@ -8,6 +8,10 @@
 
 ### Checkout and customer orders
 
+- [ ] **Site-initiated WhatsApp confirmations.** The local admin test message reached the phone, and Meta’s signed dashboard callback returned HTTP 200 on Cloudflare. The private checkout test reached Meta, which rejected the expired or invalid test token. Refresh the token and verify delivery to the phone. Public checkout uses the manual WhatsApp flow. A separate production number and approved utility template are future steps.
+
+- [ ] **Live COD smoke test.** Automated checks pass for approval and stock, cart cleanup, repeat requests, nationwide checkout, and the shipping threshold. Verify those behaviors with a controlled order on the deployed storefront.
+
 - [x] **Cart retains purchased books.** The browser checks COD request status and removes only the approved copies. It keeps copies added later and preserves the cart if the WhatsApp handoff is abandoned or the request expires. Implemented locally and pending the next Cloudflare deployment.
 - [x] **Repeat COD requests.** Verified follow-ups add books to the existing unshipped order for the same WhatsApp number, name, and address. Shipping is recalculated from the combined subtotal. Implemented locally and pending the next Cloudflare deployment.
 - [x] **Delivery area and COD cap.** Offer nationwide Pakistan delivery and remove the Rs 5,000 COD order cap. Checkout still uses PKR, manual WhatsApp confirmation, a Pakistani mobile number, and a required name, street address, and city or town. The apartment or landmark field is optional. Implemented locally and pending the next Cloudflare deployment.

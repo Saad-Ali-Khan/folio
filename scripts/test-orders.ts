@@ -11,6 +11,7 @@ import {shippingFor} from '../lib/store-policy';
 import {reconcileCheckouts} from '../lib/checkout-recovery';
 import {approveCodRequest, cancelCodOrder, createCodRequest, pakistaniMobile, recordCodEvent} from '../lib/cod-order';
 import {POST as checkoutRequest} from '../app/api/checkout/route';
+import {POST as testCheckoutRequest} from '../app/api/admin/whatsapp/checkout/route';
 import {POST as requestStatus} from '../app/api/checkout/status/route';
 import {GET as listRequests, POST as approveRequest} from '../app/api/admin/cod/route';
 import {GET as listFulfillment, POST as updateFulfillment} from '../app/api/admin/cod/orders/route';
@@ -139,12 +140,39 @@ async function main(){
   process.env.ADMIN_SESSION_SECRET = 'test-admin-session-secret';
   try {
     await db.update(schema.books).set({ stock: 3 }).where(eq(schema.books.id, book.id));
-    const request = (fields: Record<string, unknown>) => checkoutRequest(new Request('http://localhost:3000/api/checkout', {
+    const request = (fields: Record<string, unknown>, cookie?: string, test = false) => (test ? testCheckoutRequest : checkoutRequest)(new Request(
+      `http://localhost:3000${test ? '/api/admin/whatsapp/checkout' : '/api/checkout'}`, {
       method: 'POST',
-      headers: { origin: 'http://localhost:3000', 'content-type': 'application/json' },
+      headers: { origin: 'http://localhost:3000', 'content-type': 'application/json', ...(cookie ? { cookie } : {}) },
       body: JSON.stringify({ phone, name: delivery.name, line1: delivery.address.line1,
         city: delivery.address.city, items: codItems, totalCents: 275000, ...fields }),
     }));
+    const originalFetch = globalThis.fetch;
+    process.env.WHATSAPP_TEST_ACCESS_TOKEN = 'fake-token';
+    process.env.WHATSAPP_TEST_PHONE_NUMBER_ID = '123456789';
+    process.env.WHATSAPP_TEST_RECIPIENT = phone;
+    const cookie = ADMIN_COOKIE + '=' + issueSession();
+    let sends = 0;
+    globalThis.fetch = async (url, init) => {
+      sends += 1;
+      assert.match(String(url), /^https:\/\/graph\.facebook\.com\//);
+      assert.equal(JSON.parse(String(init?.body)).to, phone.slice(1));
+      return Response.json({ messages: [{ id: 'wamid.test' }] });
+    };
+    try {
+      const before = await db.select().from(schema.codRequests);
+      assert.equal((await request({}, undefined, true)).status, 401);
+      assert.equal((await request({ phone: '+923111234567' }, cookie, true)).status, 400);
+      assert.equal((await request({ totalCents: 1 }, cookie, true)).status, 409);
+      const results = await Promise.all(Array.from({ length: 2 }, () => request({}, cookie, true)));
+      assert.deepEqual(results.map(response => response.status).sort(), [200, 429]);
+      assert.deepEqual(await results.find(response => response.ok)!.json(), { accepted: true, whatsappTest: true });
+      assert.equal(sends, 1);
+      assert.deepEqual(await db.select().from(schema.codRequests), before);
+      assert.equal(await stock(), 3);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
     assert.equal((await request({ city: '' })).status, 400);
     const largeOrder = await request({ city: 'Karachi', items: [{id:book.id, qty:3}], totalCents:750000 });
     assert.equal(largeOrder.status, 200);
