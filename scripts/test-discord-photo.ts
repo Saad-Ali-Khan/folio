@@ -7,6 +7,7 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { POST as handlePhoto } from "../app/api/discord/inventory/photo/route";
 import { POST as handleCommand } from "../app/api/discord/inventory/route";
+import { GET as getBookPhoto } from "../app/api/books/[slug]/photo/route";
 import type { Database } from "../lib/db";
 import { applyMigrations } from "../lib/db/migrations";
 import { lookupIsbnMetadata } from "../lib/import-metadata";
@@ -29,14 +30,18 @@ async function main() {
     const isbn = "9780141037455";
     const image = new Uint8Array(await bwip.toBuffer({ bcid: "ean13", text: isbn, scale: 2, paddingwidth: 15 }));
     let coverLookupFailures = 2;
+    const publisherImage: { data?: Uint8Array } = {};
     globalThis.fetch = async input => {
       const url = new URL(String(input));
+      if (url.hostname === "htk3x7p5jf.ap-south-1.awsapprunner.com") return Response.json({ results: [{ Book_Id: 123, BOOK_TITLE: "Love in the Time of Cholera", authorName: "Gabriel García Márquez", publisherName: "Readings", BOOK_ISBN: "9780141037455" }] });
+      if (url.hostname === "d9z6htgewkjtb.cloudfront.net") return new Response(publisherImage.data ? new Uint8Array(publisherImage.data) : null);
       assert.equal(url.hostname, "openlibrary.org");
       const english = url.searchParams.has("q");
       const doc = {
         key: "/works/OL123W",
         title: "El amor en los tiempos del cólera",
         author_name: ["Gabriel García Márquez"],
+        cover_i: 123,
         edition_count: 100,
         editions: { docs: [{ title: english ? "Love in the Time of Cholera" : "El amor en los tiempos del cólera", language: [english ? "eng" : "spa"] }] },
       };
@@ -101,6 +106,7 @@ async function main() {
         <text x="400" y="440" text-anchor="middle" font-family="Arial" font-size="68" font-weight="bold">TIME OF CHOLERA</text>
         <text x="400" y="720" text-anchor="middle" font-family="Arial" font-size="41">GABRIEL GARCIA MARQUEZ</text>
       </svg>`)).png().toBuffer());
+    publisherImage.data = cover;
     const coverPrompt = await upload("cover-photo", "owner", "", cover);
     assert.equal(coverLookupFailures, 0);
     assert.match(coverPrompt.titleChoiceId, /^[0-9a-f]{10}$/);
@@ -112,6 +118,30 @@ async function main() {
     assert.equal(coverDraft.stock, 2);
     assert.equal(coverDraft.status, "draft");
     assert.equal(await stock(), 5, "front-cover imports never increment a verified ISBN edition");
+    const photos = await db.select().from(schema.bookPhotos);
+    assert.equal(photos.length, 1, "barcode photos are excluded and duplicate uploads keep one second photo");
+    assert.equal(photos[0].bookId, coverDraft.id);
+    const savedCover = Buffer.from(photos[0].data, "base64");
+    const photoInfo = await sharp(savedCover).metadata();
+    assert.equal(photoInfo.format, "webp");
+    assert.equal(photoInfo.width, 800);
+    assert.equal(photoInfo.height, 1000);
+    assert(savedCover.length <= 512 * 1024);
+    assert(coverDraft.coverUrl?.startsWith("https://d9z6htgewkjtb.cloudfront.net/"), "visually matching publisher artwork stays first");
+    assert.match(coverDraft.description, /readings.com.pk\/book\/123/, "artwork provenance survives title confirmation");
+    assert.match(coverDraft.description, /ISBN and translator remain unverified/);
+    const readPhoto = (slug = coverDraft.slug) => getBookPhoto(
+      new Request(`http://localhost/api/books/${slug}/photo`), { params: Promise.resolve({ slug }) },
+    );
+    assert.equal((await readPhoto()).status, 404, "draft photos are private");
+    await db.update(schema.books).set({ priceCents: 150000, status: "published" }).where(eq(schema.books.id, coverDraft.id));
+    const publishedPhoto = await readPhoto();
+    assert.equal(publishedPhoto.status, 200);
+    assert.equal(publishedPhoto.headers.get("content-type"), "image/webp");
+    assert.deepEqual(Buffer.from(await publishedPhoto.arrayBuffer()), savedCover);
+    assert.equal((await readPhoto("missing-book")).status, 404);
+    await db.delete(schema.books).where(eq(schema.books.id, coverDraft.id));
+    assert.equal((await db.select().from(schema.bookPhotos)).length, 0, "deleting a listing removes its uploaded photo");
 
     process.env.DISCORD_PHOTO_USER_IDS = "other";
     assert.match((await upload("excluded-owner", "owner")).reply, /not enabled/);

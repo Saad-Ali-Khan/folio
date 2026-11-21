@@ -92,6 +92,10 @@ export const discordCommands = pgTable("discord_commands", {
 });
 
 export type Book = typeof books.$inferSelect;
+export const bookPhotos = pgTable("book_photos", {
+  bookId: integer("book_id").primaryKey().references(() => books.id, { onDelete: "cascade" }),
+  data: text("data").notNull(),
+});
 export type Order = typeof orders.$inferSelect;
 
 export const stockMovements = pgTable("stock_movements", {

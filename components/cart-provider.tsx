@@ -9,6 +9,7 @@ import {
   useState,
   useSyncExternalStore,
   type ReactNode,
+  type Context,
 } from "react";
 import {
   EMPTY_CART, parseCart, resizeCartLine, resolveCartRequest,
@@ -29,7 +30,13 @@ type CartContextValue = {
   trackCodRequest: (request: TrackedCodRequest) => Promise<void>;
 };
 
-const CartContext = createContext<CartContextValue | null>(null);
+// Keep provider and consumers on the same context during development reloads.
+const cartGlobals = globalThis as typeof globalThis & {
+  folioCartContext?: Context<CartContextValue | null>;
+};
+const CartContext = process.env.NODE_ENV === "development"
+  ? (cartGlobals.folioCartContext ??= createContext<CartContextValue | null>(null))
+  : createContext<CartContextValue | null>(null);
 
 const STORAGE_KEY = "folio.cart.v1";
 const CHANGE_EVENT = "folio:cart-change";

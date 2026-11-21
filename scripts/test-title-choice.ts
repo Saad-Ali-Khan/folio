@@ -5,7 +5,7 @@ import {eq} from 'drizzle-orm';
 import {readFileSync,readdirSync} from 'node:fs';
 import * as schema from '../lib/db/schema';
 import type {Database} from '../lib/db';
-import {lookupImportMetadata} from '../lib/import-metadata';
+import {lookupImportMetadata,lookupCoverMetadata} from '../lib/import-metadata';
 import {queueTitleChoice,resolveTitleChoice} from '../lib/title-choice';
 async function main(){
  const originalFetch=global.fetch;
@@ -19,6 +19,25 @@ async function main(){
   const fallback=await lookupImportMetadata({isbn});assert(fallback?.titleNote);assert.equal(fallback?.titleOptions,undefined);assert.equal(fallback?.title,catalog.title);
   global.fetch=async()=>Response.json({docs:[{key:'/works/OL42W',title:'Dune',editions:{docs:[{title:'Dune',language:['eng']}]}}]});
   assert.equal((await lookupImportMetadata({isbn}))?.titleOptions,undefined);
+  let aliasReads=0;
+  global.fetch=async(input)=>{
+   const url=new URL(String(input));
+   if(url.pathname==='/authors/OL123A.json'){
+    aliasReads++;
+    return Response.json({name:'Ὅμηρος',alternate_names:['Homer','Homero']});
+   }
+   return Response.json({docs:[
+    {key:'/works/OL991W',title:'Ὀδύσσεια',author_name:['Ὅμηρος'],author_key:['OL123A'],cover_i:12345,edition_count:1000,editions:{docs:[{title:'The Odyssey',language:['eng']}]}},
+    {key:'/works/OL992W',title:'Odyssey',author_name:['Ὅμηρος'],author_key:['OL123A'],edition_count:100,editions:{docs:[{title:'Odyssey',language:['eng']}]}}
+   ]});
+  };
+  const odyssey=await lookupCoverMetadata([{text:'The',height:40},{text:'Odyssey',height:150},{text:'Homer',height:60}]);
+  assert.equal(odyssey?.author,'Homer');
+  assert.equal(odyssey?.title,'The Odyssey');
+  assert.equal(odyssey?.coverWorkId,'OL991W');
+  assert.equal(odyssey?.coverUrl,null,'a work match cannot supply verified edition artwork');
+  assert.equal(aliasReads,1,'shared author identities fetch aliases once per lookup');
+  assert.equal(await lookupCoverMetadata([{text:'Odyssey',height:150},{text:'Unrelated Writer',height:60}]),null,'the title alone never verifies its author');
  }finally{global.fetch=originalFetch;}
  const client=new PGlite();try{
   for(const f of readdirSync('drizzle').filter(f=>f.endsWith('.sql')).sort())await client.exec(readFileSync('drizzle/'+f,'utf8'));

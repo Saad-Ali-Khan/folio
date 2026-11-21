@@ -1,8 +1,9 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { connection } from "next/server";
-import { and, eq, gt, count, ilike, or } from "drizzle-orm";
+import { and, eq, gt, count, ilike, or, sql } from "drizzle-orm";
 import { getDb } from "@/lib/db";
+import { readWithRetry } from "@/lib/db/read";
 import { books, type Book } from "@/lib/db/schema";
 import { BookCard } from "./book-card";
 
@@ -45,21 +46,24 @@ export async function Catalog({ searchParams }: { searchParams: SearchParams }) 
       : undefined;
 
     const filter = and(eq(books.status, "published"), gt(books.priceCents, 0), searchFilter);
-    const [bookRows, totalRows] = await Promise.all([
-      db
-        .select()
-        .from(books)
-        .where(filter)
-        .orderBy(books.title)
-        .limit(PER_PAGE)
-        .offset((page - 1) * PER_PAGE),
-      db.select({ value: count() }).from(books).where(filter),
-    ]);
-
-    rows = bookRows;
-    total = totalRows[0]?.value ?? 0;
+    const readPage = () => db
+      .select({ book: books, total: sql<number>`count(*) over()`.mapWith(Number) })
+      .from(books)
+      .where(filter)
+      .orderBy(books.title, books.id)
+      .limit(PER_PAGE)
+      .offset((page - 1) * PER_PAGE);
+    // Retrying this read cannot create an order or change stock.
+    const bookRows = await readWithRetry(readPage);
+    rows = bookRows.map(row => row.book);
+    total = bookRows[0]?.total ??
+      (await readWithRetry(() => db.select({ value: count() }).from(books).where(filter)))[0]?.value ?? 0;
   } catch (error) {
     console.error("Catalog query failed", error);
+    const cause = error instanceof Error ? error.cause : undefined;
+    if (cause && typeof cause === "object" && "code" in cause && typeof cause.code === "string") {
+      console.error("Catalog database error code", cause.code);
+    }
     failed = true;
   }
 

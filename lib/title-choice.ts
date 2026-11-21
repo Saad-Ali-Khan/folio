@@ -41,6 +41,6 @@ export async function resolveTitleChoice(db:Database,id:string,channelId:string,
   }
   await tx.update(titleChoices).set({state:selection.toLowerCase()}).where(eq(titleChoices.id,id));
   if(savedTitle!==title)return { reply: `Stock received for the existing edition, titled ${savedTitle}. Its title was kept; use TITLES ${choice.metadata.isbn ?? savedTitle} to review it.`, completed: true };
-  return { reply: choice.bookId ? `Saved display title: ${title}.` : `Received ${choice.qty} ${choice.qty === 1 ? 'copy' : 'copies'} of ${title}. Review the draft in inventory and set its PKR price.`, completed: true };
+  return { reply: choice.bookId ? `Saved display title: ${title}.` : `Received ${choice.qty} ${choice.qty === 1 ? 'copy' : 'copies'} of ${title}. Review the draft in inventory and set its PKR price.${choice.metadata.uploadedCover ? ' Uploaded cover saved as the second listing photo.' : ''}`, completed: true };
  });
 }

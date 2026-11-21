@@ -12,6 +12,8 @@ import {
   secureEqual,
 } from "@/lib/discord-inventory";
 import { decodeBarcode, normalizeIsbn } from "@/lib/inventory-scan";
+import { prepareUploadedCover } from "@/lib/uploaded-cover";
+import { lookupPublisherCover } from "@/lib/publisher-cover";
 
 const MAX_QTY = 999;
 const MAX_PHOTO_BYTES = 12 * 1024 * 1024;
@@ -103,25 +105,30 @@ export async function POST(request: Request) {
     const rawCode = await decodeBarcode(image);
     if (!rawCode) {
       if (command.verb !== "ADD") return reply("Include a readable ISBN barcode for SET or SOLD.");
+      const initialLines = await readCoverLines(image);
       let firstMatch;
       try {
-        firstMatch = await lookupCoverMetadata(await readCoverLines(image));
+        firstMatch = await lookupCoverMetadata(initialLines);
       } catch (error) {
         if (!(error instanceof CatalogUnavailable)) throw error;
         console.warn("First cover catalog lookup failed. Retrying with focused OCR.", error.cause);
       }
-      const meta = firstMatch ?? await lookupCoverMetadata(await readCoverLines(image, true), true);
+      let meta = firstMatch ?? await lookupCoverMetadata([
+        ...initialLines, ...await readCoverLines(image, true),
+      ], true);
       const key = meta && inventoryEditionKey(meta);
       if (!meta || !key) return reply("I couldn’t confidently identify this book. Send a sharper photo showing the title and author, or the ISBN barcode.");
 
       const [coverDraft] = await db.select({ id: books.id, status: books.status }).from(books).where(eq(books.isbn, key));
       if (coverDraft?.status === "published") return reply("This cover matches a published book with an unverified edition. Send the ISBN barcode to identify the copy.");
+      meta = await lookupPublisherCover(image, meta, initialLines.map(line => line.text));
+      meta.uploadedCover = await prepareUploadedCover(image);
       if (!coverDraft && meta.titleOptions) {
         return Response.json(await queueTitleChoice(db, messageId, channelId, userId, meta, command.qty));
       }
       const received = await importDiscordBook(db, messageId, channelId, meta, command.qty);
       if (!received) return reply("Already processed.");
-      return reply(`Received ${command.qty} ${command.qty === 1 ? "copy" : "copies"} of ${received.title}. Draft stock: ${received.stock}. Review the edition in inventory.`);
+      return reply(`Received ${command.qty} ${command.qty === 1 ? "copy" : "copies"} of ${received.title}. Draft stock: ${received.stock}. Uploaded cover saved as the second listing photo. Review the edition in inventory.`);
     }
 
     const isbn = normalizeIsbn(rawCode);

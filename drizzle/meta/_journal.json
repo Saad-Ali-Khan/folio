@@ -78,6 +78,13 @@
       "when": 1794580157508,
       "tag": "0010_manual_cod_requests",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1795070264292,
+      "tag": "0011_book_photos",
+      "breakpoints": true
     }
   ]
 }

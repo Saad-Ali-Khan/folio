@@ -35,7 +35,15 @@ export async function readCoverLines(image: Buffer, focused = false): Promise<Co
     async function scan(buffer: Buffer, mode: PSM, offset = 0) {
       await Promise.race([engine.setParameters({ tessedit_pageseg_mode: mode }), timeout]);
       const { data } = await Promise.race([engine.recognize(buffer, {}, { blocks: true }), timeout]);
-      return (data.blocks ?? []).flatMap(block => block.paragraphs.flatMap(paragraph => paragraph.lines))
+      const recognized = (data.blocks ?? []).flatMap(block => block.paragraphs.flatMap(paragraph => paragraph.lines));
+      if (mode === PSM.SINGLE_LINE) {
+        // Artwork can lower a line's score even when its title word is clear.
+        return recognized.flatMap(line => line.words)
+          .filter(word => word.confidence >= 65 && /[\p{L}]{2}/u.test(word.text))
+          .map(word => ({ text: word.text.trim(), height: word.bbox.y1 - word.bbox.y0,
+            top: offset + word.bbox.y0, confidence: word.confidence }));
+      }
+      return recognized
         .filter(line => line.confidence >= 45 && line.text.trim())
         .map(line => ({ text: line.text.trim(), height: line.bbox.y1 - line.bbox.y0, top: offset + line.bbox.y0, confidence: line.confidence }));
     }
@@ -61,6 +69,29 @@ export async function readCoverLines(image: Buffer, focused = false): Promise<Co
       for (const line of await scan(crop, band.mode, top)) {
         const key = line.text.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
         if (key && line.confidence > (lines.get(key)?.confidence ?? 0)) lines.set(key, line);
+      }
+    }
+    // Expand tall, condensed lettering horizontally and read its band as a
+    // single line. Limit extra passes to the two most prominent text bands.
+    const prominent = [...lines.values()]
+      .filter(line => line.height >= info.height * 0.065)
+      .sort((a, b) => b.height - a.height).slice(0, 2);
+    const expandedSource = prominent.length
+      ? await sharp(prepared).normalize().png().toBuffer()
+      : prepared;
+    for (const line of prominent) {
+      const top = Math.max(0, line.top - Math.floor(line.height * 0.04));
+      const height = Math.min(info.height - top, Math.floor(line.height * 1.6));
+      for (const leftFraction of [0, 0.4]) {
+        const left = Math.floor(info.width * leftFraction);
+        const width = info.width - left;
+        const crop = await sharp(expandedSource).extract({ left, top, width, height })
+          .resize({ width: width * 2, height, fit: "fill" })
+          .normalize().sharpen().png().toBuffer();
+        for (const word of await scan(crop, PSM.SINGLE_LINE, top)) {
+          const key = word.text.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+          if (key && word.confidence > (lines.get(key)?.confidence ?? 0)) lines.set(key, word);
+        }
       }
     }
     return [...lines.values()].sort((a, b) => a.top - b.top);

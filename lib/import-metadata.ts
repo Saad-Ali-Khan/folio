@@ -3,12 +3,12 @@ import type { BookMetadata } from "./discord-inventory";
 import { lookupBritishCouncil, lookupHathiTrust } from "./isbn-catalogs";
 
 type Edition = { title?: string; language?: string[] };
-type SearchDoc = { key?: string; title?: string; author_name?: string[]; cover_i?: number; edition_count?: number; editions?: { docs?: Edition[] } };
+type SearchDoc = { key?: string; title?: string; author_name?: string[]; author_key?: string[]; cover_i?: number; edition_count?: number; editions?: { docs?: Edition[] } };
 export type TitleOptions = { english: string; original: string };
 export type ImportMetadata = BookMetadata & { titleOptions?: TitleOptions; titleNote?: string };
 type IsbnLookup = { status: "found"; metadata: ImportMetadata } | { status: "missing" | "unavailable" };
 
-const fields = "key,title,author_name,cover_i,edition_count,editions,editions.title,editions.language";
+const fields = "key,title,author_name,author_key,cover_i,edition_count,editions,editions.title,editions.language";
 
 export class CatalogUnavailable extends Error {}
 
@@ -135,13 +135,18 @@ export async function lookupCoverMetadata(lines: CoverLine[], retry = false): Pr
   const cached = cache.get(cacheKey);
   if (cached && cached.expires > Date.now()) return cached.result;
   const visibleWords = new Set(cover.flatMap(line => line.text.split(" ")));
+  const authorAliases = new Map<string, Promise<string[]>>();
+  const visibleAuthor = (name: string) => {
+    const parts = words(name).split(" ").filter(word => word.length > 1);
+    return parts.length > 0 && parts.every(word => visibleWords.has(word));
+  };
   const phrases = new Map<string, number>();
   for (let start = 0; start < cover.length; start++) {
     for (let count = 1; count <= 3 && start + count <= cover.length; count++) {
       const part = cover.slice(start, start + count);
       const text = part.map(line => line.text).join(" ");
       if (text.length < 3 || text.length > 100) continue;
-      const height = part.reduce((sum, line) => sum + line.height, 0) / count;
+      const height = Math.max(...part.map(line => line.height));
       phrases.set(text, Math.max(phrases.get(text) ?? 0, height));
     }
   }
@@ -151,25 +156,48 @@ export async function lookupCoverMetadata(lines: CoverLine[], retry = false): Pr
   const queryFor = (count: number) => new URLSearchParams({ q: queries.slice(0, count).map(([text]) => `title:"${text}"`).join(" OR ") });
   let docs: SearchDoc[];
   try {
-    docs = await search(queryFor(18), 24, retry ? 8000 : 4500);
+    docs = await search(queryFor(retry ? 6 : 18), 24, retry ? 10_000 : 4500);
   } catch (error) {
     if (!retry || !(error instanceof CatalogUnavailable)) throw error;
     // Retry with fewer phrases so a large search cannot keep timing out.
-    docs = await search(queryFor(6), 24, 8000);
+    docs = await search(queryFor(3), 24, 10_000);
   }
   const matches = new Map<string, { doc: SearchDoc & { title: string }; prominence: number; title: string; author: string }>();
   for (const doc of docs) {
     const id = workId(doc);
-    const author = doc.author_name?.[0];
+    let author = doc.author_name?.[0];
     if (!id || !doc.title || !author) continue;
-    const authorWords = words(author).split(" ").filter(word => word.length > 1);
-    if (!authorWords.length || !authorWords.every(word => visibleWords.has(word))) continue;
     const titles = [doc.title, doc.editions?.docs?.[0]?.title].flatMap(title =>
       title ? [title, ...title.split(/\s+\/\s+|[():]/)].map(words) : []);
     const title = titles.sort((a, b) => (phrases.get(b) ?? 0) - (phrases.get(a) ?? 0))[0];
     const prominence = phrases.get(title) ?? 0;
+    if (!prominence) continue;
+    if (!visibleAuthor(author)) {
+      // English OCR needs catalog aliases for names in another script.
+      // Unrelated Latin-script authors can be rejected without extra requests.
+      if (!/[^\p{Script=Latin}\p{Script=Common}\p{Script=Inherited}]/u.test(author)) continue;
+      const key = doc.author_key?.[0];
+      if (!key || !/^OL\d+A$/.test(key)) continue;
+      let aliases = authorAliases.get(key);
+      if (!aliases) {
+        aliases = (async () => {
+          try {
+            const response = await fetch(`https://openlibrary.org/authors/${key}.json`, { signal: AbortSignal.timeout(5000) });
+            if (!response.ok) throw new Error(`Open Library HTTP ${response.status}`);
+            const record = await response.json() as { name?: string; alternate_names?: string[] };
+            return [record.name, ...(record.alternate_names ?? [])]
+              .filter((name): name is string => typeof name === "string").slice(0, 200);
+          } catch (error) {
+            throw new CatalogUnavailable("Author aliases lookup failed", { cause: error });
+          }
+        })();
+        authorAliases.set(key, aliases);
+      }
+      author = (await aliases).find(visibleAuthor);
+      if (!author) continue;
+    }
     if (prominence && prominence > (matches.get(id)?.prominence ?? 0)) {
-      matches.set(id, { doc: { ...doc, title: doc.title }, prominence, title, author: words(author) });
+      matches.set(id, { doc: { ...doc, title: doc.title, author_name: [author] }, prominence, title, author: words(author) });
     }
   }
   const [best, ...alternatives] = [...matches.entries()].sort((a, b) =>
@@ -180,7 +208,8 @@ export async function lookupCoverMetadata(lines: CoverLine[], retry = false): Pr
   for (const [, candidate] of alternatives) {
     if (candidate.prominence < match.prominence * 0.85) break;
     // Open Library sometimes has duplicate work records for the same title and author.
-    const duplicate = candidate.title === match.title && candidate.author === match.author;
+    const comparableTitle = (title: string) => title.replace(/^(?:the|an|a) /, "");
+    const duplicate = comparableTitle(candidate.title) === comparableTitle(match.title) && candidate.author === match.author;
     const established = (match.doc.edition_count ?? 0) >= Math.max(3, 3 * (candidate.doc.edition_count ?? 0));
     if (!duplicate || !established) return null;
     const edition = candidate.doc.editions?.docs?.[0];
@@ -194,7 +223,9 @@ export async function lookupCoverMetadata(lines: CoverLine[], retry = false): Pr
   const doc = englishEdition && !exactEnglish
     ? { ...match.doc, editions: { docs: [englishEdition] } }
     : match.doc;
-  const result = { ...await metadataFromDoc(doc, null), coverWorkId: id };
+  // A work match does not verify the physical edition or its translator.
+  // Keep the uploaded photo without borrowing another edition's artwork.
+  const result = { ...await metadataFromDoc(doc, null), coverUrl: null, coverWorkId: id };
   if (cache.size >= 100) cache.delete(cache.keys().next().value!);
   cache.set(cacheKey, { result, expires: Date.now() + 30 * 60_000 });
   return result;

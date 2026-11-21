@@ -15,11 +15,52 @@ export async function createDatabase(): Promise<{
   }
 
   if (url) {
+    if (new URL(url).hostname.endsWith(".neon.tech")) {
+      const [{ Pool, neon, neonConfig }, { drizzle: drizzleTransactions }, { drizzle: drizzleHttp }, { default: WebSocket }, { fetch: databaseFetch }] = await Promise.all([
+        import("@neondatabase/serverless"),
+        import("drizzle-orm/neon-serverless"),
+        import("drizzle-orm/neon-http"),
+        import("ws"),
+        import("undici"),
+      ]);
+      neonConfig.webSocketConstructor = WebSocket;
+      // Database connections outlive a render and must use an independent
+      // HTTP client instead of Next.js's request-scoped fetch wrapper.
+      neonConfig.fetchFunction = (
+        input: Parameters<typeof databaseFetch>[0],
+        options?: Parameters<typeof databaseFetch>[1],
+      ) => databaseFetch(input, {
+        ...options,
+        signal: options?.signal
+          ? AbortSignal.any([options.signal as AbortSignal, AbortSignal.timeout(10_000)])
+          : AbortSignal.timeout(10_000),
+      });
+      neonConfig.poolQueryViaFetch = false;
+      const pool = new Pool({
+        connectionString: url,
+        max: 3,
+        connectionTimeoutMillis: 20_000,
+        idleTimeoutMillis: 20_000,
+      });
+      const transactions = drizzleTransactions(pool, { schema });
+      const db = drizzleHttp(neon(url, {
+        fetchOptions: { cache: "no-store" },
+      }), { schema });
+      // Ordinary statements use HTTPS. Interactive transactions need a
+      // dedicated WebSocket so every statement runs on the same connection.
+      Object.defineProperty(db, "transaction", {
+        value: transactions.transaction.bind(transactions),
+      });
+      return {
+        db: db as unknown as Database,
+        close: async () => { await pool.end(); },
+      };
+    }
     const [{ default: postgres }, { drizzle }] = await Promise.all([
       import("postgres"),
       import("drizzle-orm/postgres-js"),
     ]);
-    const sql = postgres(url, { max: 1 });
+    const sql = postgres(url, { max: 1, connect_timeout: 10, idle_timeout: 20 });
     return {
       db: drizzle(sql, { schema }) as unknown as Database,
       close: async () => {
@@ -41,10 +82,25 @@ export async function createDatabase(): Promise<{
   };
 }
 
-const globalForDb = globalThis as unknown as { folioDb?: Promise<Database> };
+const globalForDb = globalThis as unknown as {
+  folioDb?: Promise<Database>;
+  folioDbUrl?: string;
+};
 
 export function getDb(): Promise<Database> {
-  globalForDb.folioDb ??= createDatabase().then((connection) => connection.db);
+  const url = process.env.DATABASE_URL?.trim();
+  const cacheKey = url && new URL(url).hostname.endsWith(".neon.tech") ? `${url}#neon-undici-bounded-transactions` : url;
+  if (globalForDb.folioDbUrl !== cacheKey) {
+    globalForDb.folioDb = undefined;
+    globalForDb.folioDbUrl = cacheKey;
+  }
+  if (!globalForDb.folioDb) {
+    const pending = createDatabase().then(connection => connection.db);
+    globalForDb.folioDb = pending;
+    void pending.catch(() => {
+      if (globalForDb.folioDb === pending) globalForDb.folioDb = undefined;
+    });
+  }
   return globalForDb.folioDb;
 }
 

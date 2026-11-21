@@ -10,7 +10,7 @@ cash on delivery checkout with manual WhatsApp confirmation.
 
 ## Stack
 
-- Next.js 16 (App Router, Cache Components, Partial Prerendering) + React 19
+- Next.js 16 (App Router, request-time rendering) + React 19
 - TypeScript, Tailwind CSS v4
 - Drizzle ORM on Postgres (postgres.js), with embedded PGlite for local dev
 - WhatsApp Business click to chat for COD requests
@@ -66,6 +66,20 @@ resellable item. Stop the dev server before running CLI commands on PGlite.
 
 The Stripe instructions below cover historical Stripe payments and outstanding
 reservations from before the switch to cash on delivery.
+
+## Uploaded book covers
+
+Discord front-cover imports save the uploaded photo as the second image on
+the book detail page after identification and any title confirmation. The
+latest accepted cover upload replaces the previous second image. Barcode
+scans keep their existing inventory behavior. Photos are resized to WebP,
+stored in the database, and become public when the listing is published.
+Existing edition matching and stock rules apply.
+
+Run `npm run db:setup` against the database shared by the importer and
+storefront before running this version. This adds `book_photos` through
+`0011_book_photos.sql`. Deploy the updated storefront and restart the local
+Discord/OCR app to activate photo display and capture.
 
 ## WhatsApp test setup
 
@@ -725,6 +739,8 @@ rewritten. Restart `npm run bot:discord` after updating so it forwards the
 Discord user ID needed to bind title choices to the requester.
 
 Test with `npx tsx scripts/test-title-choice.ts` and `npx tsx scripts/test-discord-photo.ts`.
+
+Cover-only imports check Readings, Open Library edition records, and Google Books for visually matching artwork after identifying the title and author. These sources cover multiple publishers. Visible imprint clues (including Readings, Penguin, Puffin, Oxford, Wordsworth, Vintage, Scholastic, HarperCollins, Macmillan, and Liberty) narrow the candidates. A strong, unambiguous match supplies the first image; the uploaded photo remains second. Repeated evidence for the same catalog ISBN is grouped across sources. The draft description records the source and edition uncertainty. Visual matching never assigns an ISBN or translator, and unavailable or uncertain matches preserve the work-only draft. No paid search service is required. Google Books may throttle public requests; optionally set `GOOGLE_BOOKS_API_KEY` locally for your application's quota. A source outage does not stop the other catalogs. Arbitrary publisher websites and full title pages are not searched. Run `npx tsx scripts/test-publisher-cover.ts` for the artwork resolver regression checks.
 
 ## Staging and production setup
 

@@ -7,22 +7,23 @@ import { and, eq, gt } from "drizzle-orm";
 import { AddToCartButton } from "@/components/add-to-cart";
 import { BookCover } from "@/components/book-cover";
 import { getDb } from "@/lib/db";
-import { books } from "@/lib/db/schema";
+import { readWithRetry } from "@/lib/db/read";
+import { bookPhotos, books } from "@/lib/db/schema";
 import { formatPrice } from "@/lib/format";
 
 // Book pages resolve their slug before rendering so unknown titles get a real
 // 404 status instead of a streamed soft 404.
-export const instant = false;
+export const dynamic = "force-dynamic";
 
 type Params = { slug: string };
 
 const getBook = cache(async (slug: string) => {
   const db = await getDb();
-  const [book] = await db
+  const [book] = await readWithRetry(() => db
     .select()
     .from(books)
     .where(and(eq(books.slug, slug), eq(books.status, "published"), gt(books.priceCents, 0)))
-    .limit(1);
+    .limit(1));
   return book ?? null;
 });
 
@@ -50,6 +51,9 @@ export default async function BookPage({
   await connection();
   const book = await getBook(slug);
   if (!book) notFound();
+  const db = await getDb();
+  const [photo] = await readWithRetry(() => db.select({ bookId: bookPhotos.bookId })
+    .from(bookPhotos).where(eq(bookPhotos.bookId, book.id)).limit(1));
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6">
@@ -61,13 +65,27 @@ export default async function BookPage({
       </Link>
 
       <div className="mt-8 grid gap-10 md:grid-cols-[300px_1fr] lg:gap-14">
-        <BookCover
-          src={book.coverUrl}
-          title={book.title}
-          eager
-          className="aspect-[2/3] w-full max-w-[300px] shadow-md ring-1 ring-ink/5"
-          sizes="(max-width: 768px) 60vw, 300px"
-        />
+        <div className="space-y-5">
+          <BookCover
+            src={book.coverUrl}
+            title={book.title}
+            eager
+            className="aspect-[2/3] w-full max-w-[300px] shadow-md ring-1 ring-ink/5"
+            sizes="(max-width: 768px) 60vw, 300px"
+          />
+          {photo && (
+            <figure>
+              {/* This endpoint serves an already resized WebP photograph. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={`/api/books/${encodeURIComponent(book.slug)}/photo`}
+                alt={`Uploaded full cover of ${book.title}`}
+                width={1200} height={1600}
+                className="h-auto w-full max-w-[300px] rounded-sm"
+                loading="lazy" />
+              <figcaption className="mt-2 text-sm text-ink/60">Uploaded cover</figcaption>
+            </figure>
+          )}
+        </div>
 
         <div>
           <p className="text-xs uppercase tracking-[0.18em] text-accent">

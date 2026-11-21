@@ -2,7 +2,7 @@ import {lookupImportMetadata} from "./import-metadata";
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import { and, eq, gte, sql } from "drizzle-orm";
 import type { Database } from "@/lib/db";
-import { books, discordCommands, type Book } from "@/lib/db/schema";
+import { books, bookPhotos, discordCommands, type Book } from "@/lib/db/schema";
 import type { InventoryVerb } from "@/lib/inventory-command";
 
 export function secureEqual(left: string, right: string) {
@@ -72,6 +72,8 @@ export type BookMetadata = {
   isbn: string | null;
   coverUrl: string | null;
   coverWorkId?: string;
+  uploadedCover?: string;
+  description?: string;
 };
 
 export function inventoryEditionKey(meta: BookMetadata): string | null {
@@ -104,12 +106,16 @@ export async function createBook(
       slug,
       priceCents: 0,
       stock,
-      description: "",
+      description: meta.description ?? "",
       coverUrl: meta.coverUrl,
     })
-    .returning({ title: books.title, slug: books.slug, stock: books.stock });
+    .returning({ id: books.id, title: books.title, slug: books.slug, stock: books.stock });
 
-  return created;
+  if (meta.uploadedCover) {
+    await db.insert(bookPhotos).values({ bookId: created.id, data: meta.uploadedCover });
+  }
+
+  return { title: created.title, slug: created.slug, stock: created.stock };
 }
 
 export async function createBookFromTitle(
@@ -153,6 +159,10 @@ export async function importDiscordBook(db: Database, messageId: string, channel
      .where(and(eq(books.id, existing.id), meta.coverWorkId ? eq(books.status, "draft") : undefined))
      .returning();
    if (!updated) throw new Error("The inventory entry changed. Send the photo again or scan the ISBN barcode.");
+   if (meta.uploadedCover) {
+    await tx.insert(bookPhotos).values({ bookId: updated.id, data: meta.uploadedCover })
+     .onConflictDoUpdate({ target: bookPhotos.bookId, set: { data: meta.uploadedCover } });
+   }
    return updated;
   }
   return createBook(tx as unknown as Database, meta, qty);

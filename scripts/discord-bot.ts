@@ -30,6 +30,7 @@ if (!token || !channelId || !secret) {
 }
 
 const client = new Client({
+  rest: { timeout: 10_000, retries: 1 },
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
@@ -53,6 +54,7 @@ client.on(Events.MessageCreate, async (message) => {
 
   try {
     if (photos.size > 0) {
+      if ("sendTyping" in message.channel) await message.channel.sendTyping().catch(() => {});
       let index = 0;
       for (const photo of photos.values()) {
         index += 1;
@@ -96,6 +98,10 @@ client.on(Events.MessageCreate, async (message) => {
     if (result.reply) await message.reply(replyOptions(result));
   } catch (error) {
     console.error("Discord inventory request failed", error);
+    await message.reply({
+      content: "I couldn't confirm the result from the inventory app. Check the book's stock in admin before resending, since the upload may have completed. Make sure the local app is running.",
+      allowedMentions: { parse: [], repliedUser: false },
+    }).catch(replyError => console.error("Discord error reply failed", replyError));
   }
 });
 
@@ -104,7 +110,11 @@ client.on(Events.InteractionCreate, async interaction => {
   const choice = /^folio-title:([0-9a-f]{10}):(ENGLISH|ORIGINAL|CANCEL)$/.exec(interaction.customId);
   if (!choice) return;
   try {
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    await interaction.reply({
+      content: "Saving your title choice…",
+      flags: MessageFlags.Ephemeral,
+      allowedMentions: { parse: [] },
+    });
     const result = await postToInventory("/api/discord/inventory", {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -114,12 +124,18 @@ client.on(Events.InteractionCreate, async interaction => {
         titleChoice: { id: choice[1], selection: choice[2] },
       }),
     });
+    if (result.completed) {
+      await interaction.message.edit({
+        content: result.reply ?? "Title request completed.",
+        components: [],
+        allowedMentions: { parse: [] },
+      }).catch(error => console.error("Could not update the completed title prompt", error));
+    }
     await interaction.editReply({ content: result.reply ?? "Title request unavailable.", allowedMentions: { parse: [] } });
-    if (result.completed) await interaction.message.edit({ components: [] });
   } catch (error) {
     console.error("Discord title button failed", error);
-    if (interaction.deferred && !interaction.replied) {
-      await interaction.editReply("Could not save that title choice. Try again.").catch(console.error);
+    if (interaction.deferred || interaction.replied) {
+      await interaction.editReply("Could not confirm the title response. Check the book in admin before retrying.").catch(console.error);
     }
   }
 });
