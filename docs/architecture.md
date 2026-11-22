@@ -116,6 +116,37 @@ other paused backlog work. Off-device storage remains deferred.
 
 ## Keeping this knowledge base current
 
+### Local inventory service supervision
+
+`scripts/local-services.ts` supervises the local Next webpack development server
+and Discord bot without adding a hosted worker or paid supervisor. This keeps OCR
+and Discord on the operator's PC. `local:up` launches hidden; `local:status` reads
+authenticated loopback control; `local:stop` stops only children of that launcher.
+Exclusive PID/nonce locks reject duplicate supervisors and bot sessions. Stale
+locks are recovered only when the recorded process no longer exists. Unknown or
+uninspectable processes are left alone. Port 3000 must be available before launch.
+
+The local-only `/api/local/health` route requires the inventory shared secret,
+returns uncached configuration/image-library/OCR-asset readiness, and is excluded
+from Cloudflare staging alongside the Discord routes. It deliberately does not
+query Neon: a 15-second database probe would prevent free-tier autosuspension.
+Readiness is not a database or full OCR import test. Discord sends a local IPC
+heartbeat every ten seconds. Crashes use exponential backoff capped at a minute;
+Gateway/heartbeat loss lasting 90 seconds triggers recovery. Three API failures
+suspend the bot, and API recovery has a two-minute grace. Import writes are never
+automatically replayed. Existing source-message idempotency remains the safeguard
+when an interrupted import is inspected and retried by the operator.
+
+Private runtime/control files and logs live in Git-ignored `.folio-local`.
+Control binds only to loopback and requires a random per-launch bearer token.
+Logs redact configured secret values and database URLs, assemble complete lines
+before redaction, drop oversized lines, and rotate at 5 MiB with two archives per
+component. A prepared current-user, limited-privilege Windows logon task launches
+hidden and avoids storing credentials. Its installation was blocked in the agent
+environment; actual registration and a post-logon check remain backlog work.
+PC sleep, logout, network loss, or shutdown can still interrupt imports. The
+Cloudflare storefront continues to operate separately against the shared database.
+
 Update this page in the same change whenever routes, rendering, data flows, authentication, integrations, or deployment change. For a significant design decision, record what changed, why, and what it means for running the store. Put proposed changes and unresolved issues in the [backlog](../BACKLOG.md). Keep credentials and customer data out of the documentation.
 
 ### Cover artwork and edition identity

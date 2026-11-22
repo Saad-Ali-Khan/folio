@@ -1,5 +1,53 @@
 # Folio
 
+## Running local Discord and OCR reliably
+
+From the Folio directory in PowerShell, use Node 24 or newer and the existing
+`.env.local` configuration. Set `INVENTORY_API_URL=http://127.0.0.1:3000` (the
+existing `http://localhost:3000` value is also accepted).
+
+```powershell
+cd "C:\Users\xsaaa\Documents\Codex\2026-11-11\ho\folio"
+npm run local:up
+npm run local:status
+```
+
+The hidden launcher starts a loopback-only Next development server using webpack,
+then connects Discord once the local inventory API and OCR assets are ready.
+Allow the first route compilation to finish, then run `local:status` again:
+both `api.ready` and `bot.ready` should be `true`. Do not also run `npm run dev`
+or `npm run bot:discord`. An occupied port or existing bot lock is reported;
+the launcher does not terminate an independently started service.
+
+`npm run local:stop` stops only the launcher's processes. `npm run local:start`
+keeps the launcher in the current window for troubleshooting. Component logs are
+under `.folio-local/logs`; each retains a 5 MiB file and two rotated copies.
+Configured secrets and database URLs are redacted. Treat logs and the entire
+Git-ignored `.folio-local` directory as private. Do not share `control.json`.
+
+To start automatically at Windows logon, run `npm run local:install-startup`
+in your own PowerShell session. It registers the current user's limited-privilege
+**Folio Local Inventory** task, launches hidden, and stores no passwords. If
+script execution is blocked, use the manual launcher for now rather than changing
+machine security policy. Remove the task with
+`powershell.exe -NoProfile -File scripts/install-local-startup.ps1 -Remove`.
+The installer refuses to overwrite an existing task. Reinstall after moving the
+project or replacing the Node executable. Startup installation has not yet been
+verified on the operator's Windows account.
+
+The supervisor retries crashes with exponential delay (up to 60 seconds), waits
+through startup compilation, and restarts a bot whose Gateway readiness or
+heartbeat remains unavailable for 90 seconds. Three failed API probes suspend
+the bot; after the two-minute startup/recovery grace the API is restarted too.
+Inventory requests are never replayed by the supervisor. After interruption,
+inspect the saved listing before resending an upload.
+
+Health checks run every 15 seconds and inspect API configuration, native image
+support, and English OCR assets. They do **not** query Neon, run an OCR job, or
+prove an import will succeed. The PC must be awake, connected, and logged in;
+Cloudflare storefront availability is independent of these local services.
+Run lifecycle/redaction tests with `npx tsx scripts/test-local-services.ts`.
+
 A small independent bookstore with a searchable catalog, inventory admin, and
 cash on delivery checkout with manual WhatsApp confirmation.
 

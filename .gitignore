@@ -46,4 +46,5 @@ next-env.d.ts
 /.folio-cloudflare/
 /.folio-backups/
 /.folio-backup-key
+/.folio-local/
 .neon

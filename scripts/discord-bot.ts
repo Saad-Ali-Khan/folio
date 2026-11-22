@@ -1,4 +1,14 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, Client, Events, GatewayIntentBits, MessageFlags } from "discord.js";
+import { fileURLToPath } from "node:url";
+import { acquireLock } from "./local-runtime";
+
+try {
+  const release = acquireLock(fileURLToPath(new URL("../.folio-local/bot.lock", import.meta.url)));
+  process.once("exit", release);
+} catch {
+  console.error("Discord bot already running or its lock cannot be inspected. Stop the existing bot first.");
+  process.exit(78);
+}
 
 type InventoryReply = { reply?: string | null; titleChoiceId?: string; completed?: boolean };
 
@@ -37,6 +47,20 @@ const client = new Client({
     GatewayIntentBits.MessageContent,
   ],
 });
+
+// The supervisor waits for Gateway readiness; no customer messages are sent by monitoring.
+const heartbeat = setInterval(() => {
+  if (process.connected) process.send?.({ type: "folio-bot-health", ready: client.isReady() });
+}, 10_000);
+heartbeat.unref();
+function shutdown() {
+  clearInterval(heartbeat);
+  client.destroy();
+  process.exit(0);
+}
+process.once("SIGINT", shutdown);
+process.once("SIGTERM", shutdown);
+client.on(Events.Error, error => console.error("Discord client error", error.message));
 
 client.once(Events.ClientReady, (ready) => {
   console.log(

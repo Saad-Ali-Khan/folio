@@ -17,6 +17,11 @@
     "backup:recover-sql": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/backup.ts recover-sql",
     "books": "tsx scripts/books.ts",
     "bot:discord": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/discord-bot.ts",
+    "local:start": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/local-services.ts start",
+    "local:up": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/local-services.ts up",
+    "local:status": "tsx scripts/local-services.ts status",
+    "local:stop": "tsx scripts/local-services.ts stop",
+    "local:install-startup": "powershell.exe -NoProfile -File scripts/install-local-startup.ps1",
     "orders": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/orders.ts",
     "build:cloudflare": "node scripts/build-cloudflare.mjs",
     "deploy:cloudflare": "node scripts/build-cloudflare.mjs --deploy"
