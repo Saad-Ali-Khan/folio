@@ -29,8 +29,8 @@ export function parseEditionInput(input: unknown): EditionInput {
     isbnConfirmed: raw.isbnConfirmed, isbnEvidence: text("isbnEvidence", 1000), candidateId: text("candidateId", 200), useArtwork: raw.useArtwork,
     expectedRevision: Number(raw.expectedRevision), expectedIsbn: text("expectedIsbn", 200) };
   if (parsed.reviewed && !parsed.evidence) throw new EditionError("Record the source or physical page used to verify edition details.");
-  if (parsed.linkIsbn && (!canonicalIsbn(parsed.linkIsbn) || !parsed.isbnConfirmed || !parsed.isbnEvidence)) {
-    throw new EditionError("Enter a valid ISBN and confirm it from the physical copy, with an evidence note.");
+  if (parsed.linkIsbn && (!canonicalIsbn(parsed.linkIsbn) || !parsed.isbnConfirmed)) {
+    throw new EditionError("Enter a valid ISBN and confirm it from the physical copy.");
   }
   return parsed;
 }
@@ -55,7 +55,10 @@ export async function saveEdition(db: Database, bookId: number, input: EditionIn
     if (collision) throw new EditionError(`ISBN already belongs to “${collision.title}” (listing ${collision.id}). Nothing was merged or restocked.`, 409);
     isbn = normalized;
   }
-  const evidence = [input.evidence, input.linkIsbn ? `Physical ISBN ${isbn}: ${input.isbnEvidence}` : ""].filter(Boolean).join("\n");
+  const isbnSource = chosen?.isbn && canonicalIsbn(chosen.isbn) === isbn
+    ? ` Catalog reference: ${chosen.catalog}, ${chosen.source}.` : "";
+  const evidence = [input.evidence, input.linkIsbn
+    ? `Physical ISBN ${isbn}: admin confirmed against the physical copy.${isbnSource}${input.isbnEvidence ? ` Note: ${input.isbnEvidence}` : ""}` : ""].filter(Boolean).join("\n");
   if (evidence.length > 3500) throw new EditionError("Edition evidence is too long.");
   await db.insert(bookEditions).values({ bookId, publisher: input.publisher, translator: input.translator, language: input.language,
     edition: input.edition, evidence, reviewStatus: input.reviewed ? "reviewed" : "unverified", revision: previous.revision + 1 })

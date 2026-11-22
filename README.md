@@ -128,14 +128,14 @@ reported language/publication year. Descriptions about other translations are
 never translator evidence. Existing proposals need a new saved-cover search to
 retrieve these additional fields. Applying a cover is a separate checkbox.
 For a manual work key, the catalog ISBN is also staged in the ISBN input, with
-physical confirmation and evidence still empty. Complete that physical check or
+physical confirmation still unchecked and the optional note empty. Complete that physical check or
 choose **Keep ISBN unlinked** before saving. Existing linked ISBNs are untouched.
 Nothing applies until you save the book. Search stores proposals only,
 without modifying the listing, stock, prices, photos, or reviewed fields.
 
 A cover-only listing also offers **Link the physical copy's ISBN**. Enter or review an
-ISBN-10 or ISBN-13, record where you checked it on this copy, and confirm the
-physical check. ISBN checksums are validated and ISBN-10 is stored as equivalent
+ISBN-10 or ISBN-13 and confirm the
+physical check. The server records this attestation and a matching stored catalog source automatically; a written ISBN note is optional. ISBN checksums are validated and ISBN-10 is stored as equivalent
 ISBN-13. The book ID, slug, stock, uploaded photograph and order links stay intact.
 An ISBN already linked to another listing stops the entire save with HTTP 409,
 including any staged title/price/stock edits; no automatic merge or restock occurs.

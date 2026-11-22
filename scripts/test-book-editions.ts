@@ -65,9 +65,11 @@ async function main() {
     console.log("PASS evidence required, explicit artwork choice preserves ISBN, refreshed proposals preserve reviewed metadata");
 
     const linked = await updateAdminBook(db, input(evidenced, { ...reviewedInput, expectedRevision: retained.revision,
-      linkIsbn: "0-14-103745-8", isbnConfirmed: true, isbnEvidence: "Checked barcode on this physical copy" }));
+      linkIsbn: "0-14-103745-8", isbnConfirmed: true, isbnEvidence: "", candidateId: candidate.id }));
     assert.equal(linked.isbn, "9780141037455"); assert.equal(linked.id, book.id); assert.equal(linked.slug, book.slug); assert.equal(linked.stock, 2);
     assert.match((await getEdition(db, book.id)).evidence, /Physical ISBN 9780141037455/);
+    assert.match((await getEdition(db, book.id)).evidence, /admin confirmed against the physical copy/);
+    assert.match((await getEdition(db, book.id)).evidence, /Catalog reference: Readings catalog, https:\/\/readings.com.pk\/book\/1/);
     const [other] = await db.insert(schema.books).values({ isbn: "manual-other-copy", slug: "other-copy", title: "Other title", author: "Other author", priceCents: 10000, stock: 3 }).returning();
     const beforeCollisionMovements = (await db.select().from(schema.stockMovements)).length;
     await assert.rejects(updateAdminBook(db, { ...input(other, { ...edition, expectedIsbn: other.isbn, linkIsbn: "9780141037455", isbnConfirmed: true, isbnEvidence: "Test physical scan" }), title: "Must roll back", stock: 7, stockReason: "Synthetic collision test" }), (error: unknown) => (error as EditionError).status === 409);

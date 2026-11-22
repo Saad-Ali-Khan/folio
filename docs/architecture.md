@@ -216,7 +216,7 @@ a refresh to gain these fields. A pure client staging helper is regression-teste
 for populated fields, missing metadata, and retention of all ISBN protections.
 
 Linking a manual work key to a physical ISBN validates the checksum, canonicalizes
-ISBN-10 to ISBN-13 and requires physical-copy attestation plus evidence. The ID,
+ISBN-10 to ISBN-13 and requires physical-copy attestation. The server records that confirmation and a matching stored catalog source automatically; the operator may add an optional note. The ID,
 slug, photos and order references remain stable; metadata operations never merge
 listings or transfer stock. A collision aborts the entire edit. The immutable SQL
 `folio_isbn_key` function and expression unique index protect canonical aliases

@@ -97,9 +97,9 @@ export function EditionFields({ bookId, isbn, value, onChange, onExpired, disabl
         <label className="block text-sm font-medium" htmlFor="edition-isbn">Link the physical copy’s ISBN<input id="edition-isbn" className={field} maxLength={40}
           value={value.linkIsbn} placeholder="ISBN-10 or ISBN-13 from this copy" onChange={event => onChange({ ...value, linkIsbn: event.target.value, isbnConfirmed: false })} /></label>
         {value.linkIsbn && <>
-          <p className="text-xs text-ink/60">The catalog ISBN is staged here. It will only be linked after you check your copy and complete the evidence below. <button type="button" className="underline" onClick={() => onChange({ ...value, linkIsbn: "", isbnConfirmed: false, isbnEvidence: "" })}>Keep ISBN unlinked</button></p>
-          <label className="block text-sm" htmlFor="edition-isbn-evidence">ISBN evidence<input id="edition-isbn-evidence" className={field} maxLength={1000} required
-            value={value.isbnEvidence} placeholder="Barcode or copyright page checked against this copy" onChange={event => onChange({ ...value, isbnEvidence: event.target.value })} /></label>
+          <p className="text-xs text-ink/60">Check your copy and tick the confirmation below to link this ISBN. Your confirmation and any matching catalog source are recorded automatically. <button type="button" className="underline" onClick={() => onChange({ ...value, linkIsbn: "", isbnConfirmed: false, isbnEvidence: "" })}>Keep ISBN unlinked</button></p>
+          <label className="block text-sm" htmlFor="edition-isbn-evidence">ISBN note (optional)<input id="edition-isbn-evidence" className={field} maxLength={1000}
+            value={value.isbnEvidence} placeholder="Optional details about the barcode or copyright page" onChange={event => onChange({ ...value, isbnEvidence: event.target.value })} /></label>
           <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1" required checked={value.isbnConfirmed} onChange={event => onChange({ ...value, isbnConfirmed: event.target.checked })} />
             <span>I verified this ISBN on the physical copy. Matching an existing listing will stop this save; it will not merge copies.</span></label>
         </>}
