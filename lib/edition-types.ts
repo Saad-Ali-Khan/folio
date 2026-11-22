@@ -3,6 +3,9 @@ export type EditionCandidate = {
   title: string;
   author: string;
   publisher: string;
+  translator?: string;
+  language?: string;
+  edition?: string;
   isbn: string | null;
   coverUrl: string;
   source: string;

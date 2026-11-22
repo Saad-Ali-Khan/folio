@@ -3,8 +3,16 @@ import type { ImportMetadata } from "./import-metadata";
 export type CoverCandidate = {
   title: string; author: string; publisher: string; coverUrl: string;
   source: string; catalog: string; identity: string;
+  translator?: string; language?: string; edition?: string;
 };
 export type CatalogReader = (url: string, signal: AbortSignal, maxBytes: number) => Promise<Buffer>;
+
+export function catalogLanguage(code: unknown) {
+  if (typeof code !== "string" || !/^[a-z]{2,3}$/i.test(code)) return "";
+  try { return new Intl.DisplayNames(["en"], { type: "language", fallback: "none" }).of(code.toLowerCase()) ?? ""; } catch { return ""; }
+}
+
+function shortText(value: unknown, max = 300) { return typeof value === "string" ? value.trim().slice(0, max) : ""; }
 
 export function normalizeCoverText(text: string) {
   return text.normalize("NFKD").toLowerCase().replace(/\p{M}/gu, "")
@@ -36,13 +44,18 @@ export async function openLibraryCovers(meta: ImportMetadata, read: CatalogReade
   if (!meta.coverWorkId || !/^OL\d+W$/.test(meta.coverWorkId)) return [];
   const source = `https://openlibrary.org/works/${meta.coverWorkId}/editions.json?limit=40`;
   const data = JSON.parse((await read(source, signal, 1_000_000)).toString()) as {
-    entries?: { key?: string; title?: string; publishers?: string[]; covers?: number[]; isbn_13?: string[]; works?: { key?: string }[] }[];
+    entries?: { key?: string; title?: string; publishers?: string[]; covers?: number[]; isbn_13?: string[]; works?: { key?: string }[];
+      languages?: { key?: string }[]; edition_name?: string; contributors?: { role?: string; name?: string }[] }[];
   };
   return (data.entries ?? []).flatMap(edition => {
     const cover = edition.covers?.find(value => Number.isSafeInteger(value) && value > 0);
     if (!edition.key || !/^\/books\/OL\d+M$/.test(edition.key) || !edition.title || !cover ||
         !edition.works?.some(work => work.key === `/works/${meta.coverWorkId}`)) return [];
     return [{ title: edition.title, author: meta.author, publisher: edition.publishers?.join(", ") ?? "Publisher not recorded",
+      language: (edition.languages ?? []).map(language => catalogLanguage(language.key?.match(/^\/languages\/([a-z]{3})$/)?.[1])).filter(Boolean).join(", ").slice(0, 100),
+      edition: shortText(edition.edition_name),
+      translator: (edition.contributors ?? []).filter(person => typeof person.role === "string" && person.role.trim().toLowerCase() === "translator")
+        .map(person => shortText(person.name)).filter(Boolean).join(", ").slice(0, 300),
       coverUrl: `https://covers.openlibrary.org/b/id/${cover}-L.jpg?default=false`,
       source: `https://openlibrary.org${edition.key}`, catalog: "Open Library edition catalog",
       identity: identity(edition.isbn_13, `openlibrary:${edition.key}`) }];
@@ -55,7 +68,8 @@ export async function googleBooksCovers(meta: ImportMetadata, read: CatalogReade
   const key = process.env.GOOGLE_BOOKS_API_KEY?.trim();
   if (key) params.set("key", key);
   const data = JSON.parse((await read(`https://www.googleapis.com/books/v1/volumes?${params}`, signal, 1_000_000)).toString()) as {
-    items?: { id?: string; volumeInfo?: { title?: string; authors?: string[]; publisher?: string; imageLinks?: { thumbnail?: string }; industryIdentifiers?: { identifier?: string }[] } }[];
+    items?: { id?: string; volumeInfo?: { title?: string; authors?: string[]; publisher?: string; language?: string; publishedDate?: string;
+      imageLinks?: { thumbnail?: string }; industryIdentifiers?: { identifier?: string }[] } }[];
   };
   return (data.items ?? []).flatMap(item => {
     const info = item.volumeInfo;
@@ -69,6 +83,7 @@ export async function googleBooksCovers(meta: ImportMetadata, read: CatalogReade
     const author = info.authors?.find(name => normalizeCoverText(name) === normalizeCoverText(meta.author));
     if (!author) return [];
     return [{ title: info.title, author, publisher: info.publisher ?? "Publisher not recorded", coverUrl: image.href,
+      language: catalogLanguage(info.language), edition: typeof info.publishedDate === "string" && /^\d{4}(?:-|$)/.test(info.publishedDate) ? `Published ${info.publishedDate.slice(0, 4)}` : "",
       source: `https://books.google.com/books?id=${item.id}`, catalog: "Google Books",
       identity: identity(info.industryIdentifiers?.map(value => value.identifier), `google:${item.id}`) }];
   });

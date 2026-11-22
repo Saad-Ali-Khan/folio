@@ -20,6 +20,7 @@ async function main() {
     if (offline) throw new Error("offline");
     if (url.hostname === "htk3x7p5jf.ap-south-1.awsapprunner.com") {
       if (readingsOffline) throw new Error("Readings offline");
+      if (url.pathname === "/api/books/123") return Response.json({ book: { ...record, BOOK_LANGUAGE: "E", binding: "Paperback", PUBLISHED_DATE: "2023-07-10T00:00:00.000Z" } });
       return Response.json({ results: candidates });
     }
     if (url.hostname === "openlibrary.org") return Response.json({ entries: openEntries });
@@ -35,6 +36,8 @@ async function main() {
     assert.equal(match.isbn, null, "matching artwork never assigns a physical ISBN");
     assert.match(match.description!, /Physical ISBN and translator remain unverified/);
     assert.match(match.description!, /https:\/\/readings.com.pk\/book\/123/);
+    assert.equal(match.editionCandidates?.[0].language, "English");
+    assert.equal(match.editionCandidates?.[0].edition, "Paperback · published 2023");
     catalogImage = other;
     assert.equal((await lookupPublisherCover(cover, meta, [])).coverUrl, null, "same title and author with different artwork is rejected");
     catalogImage = cover;

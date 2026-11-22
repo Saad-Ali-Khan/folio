@@ -201,6 +201,20 @@ keys display as “Not verified” rather than masquerading as an ISBN. Evidence
 and candidate lists remain admin-only. Existing generated description notes are
 preserved; review those notes too when correcting previously unverified details.
 
+Proposal application was extended after operator GUI feedback on November 22:
+the button fills all available edition fields and stages an ISBN for a manual
+work key, while clearing reviewed/physical-confirmation state. Missing fields stay
+blank. Only the existing save transaction can persist or link it. Readings detail
+enrichment fetches at most five exact `/api/books/{id}` records within the existing
+12-second budget and 1 MB response bound, checking record ID, ISBN, title and author
+against the compared artwork record. It maps recognized language codes and records
+binding/publication year without claiming a numbered printing. It never extracts
+a translator from marketing prose or related books. Open Library uses explicit
+translator contributors, language and edition name; Google Books contributes
+language and labeled publication year. Old stored proposals remain valid but need
+a refresh to gain these fields. A pure client staging helper is regression-tested
+for populated fields, missing metadata, and retention of all ISBN protections.
+
 Linking a manual work key to a physical ISBN validates the checksum, canonicalizes
 ISBN-10 to ISBN-13 and requires physical-copy attestation plus evidence. The ID,
 slug, photos and order references remain stable; metadata operations never merge

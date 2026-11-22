@@ -119,13 +119,21 @@ minute. An outage or lack of a close match can leave no proposals; it is not
 proof that no edition exists. Translators and missing language/edition data
 must still be checked from reliable evidence.
 
-**Use publisher proposal** fills the proposed publisher/source, clears unsupported
-translator/language/edition fields, and clears verification. Applying its cover
-is a separate checkbox. Nothing applies until you save the book; candidate ISBNs
-are informational and never copied automatically. Search stores proposals only,
+**Use catalog details** fills publisher/source and any translator, language and
+edition details explicitly supplied by the catalog, clears unsupported fields,
+and clears verification. Readings proposals fetch the exact matching book record
+for its reported language and binding/publication year; Open Library contributes
+explicit translator credits, language and edition name, and Google Books supplies
+reported language/publication year. Descriptions about other translations are
+never translator evidence. Existing proposals need a new saved-cover search to
+retrieve these additional fields. Applying a cover is a separate checkbox.
+For a manual work key, the catalog ISBN is also staged in the ISBN input, with
+physical confirmation and evidence still empty. Complete that physical check or
+choose **Keep ISBN unlinked** before saving. Existing linked ISBNs are untouched.
+Nothing applies until you save the book. Search stores proposals only,
 without modifying the listing, stock, prices, photos, or reviewed fields.
 
-A cover-only listing also offers **Link the physical copy's ISBN**. Enter an
+A cover-only listing also offers **Link the physical copy's ISBN**. Enter or review an
 ISBN-10 or ISBN-13, record where you checked it on this copy, and confirm the
 physical check. ISBN checksums are validated and ISBN-10 is stored as equivalent
 ISBN-13. The book ID, slug, stock, uploaded photograph and order links stay intact.

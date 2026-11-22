@@ -1,6 +1,7 @@
 import sharp from "sharp";
 import { createHash } from "node:crypto";
 import { canonicalIsbn } from "./isbn";
+import { enrichReadingsEdition } from "./readings-edition";
 import type { ImportMetadata } from "./import-metadata";
 import { fitsCover, googleBooksCovers, openLibraryCovers, type CoverCandidate } from "./cover-catalogs";
 
@@ -95,10 +96,13 @@ export async function lookupPublisherCover(image: Buffer, meta: ImportMetadata, 
     }
     // Reused jackets and near ties remain unverified, even within one publisher.
     const ranked = [...editions.values()].sort((a, b) => a.score - b.score);
-    const editionCandidates = ranked.filter(result => result.gray <= 0.22 && result.color <= 0.22).slice(0, 5).map(({ candidate }) => ({
+    const closeCandidates = await Promise.all(ranked.filter(result => result.gray <= 0.22 && result.color <= 0.22).slice(0, 5)
+      .map(({ candidate }) => enrichReadingsEdition(candidate, boundedFetch, signal)));
+    const editionCandidates = closeCandidates.map(candidate => ({
       id: createHash("sha256").update(candidate.source).digest("hex").slice(0, 24),
       title: candidate.title.slice(0, 300), author: candidate.author.slice(0, 300),
       publisher: candidate.publisher === "Publisher not recorded" ? "" : candidate.publisher.slice(0, 300),
+      translator: candidate.translator ?? "", language: candidate.language ?? "", edition: candidate.edition ?? "",
       isbn: candidate.identity.startsWith("isbn:") ? canonicalIsbn(candidate.identity.slice(5)) : null,
       coverUrl: candidate.coverUrl, source: candidate.source, catalog: candidate.catalog,
     }));

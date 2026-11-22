@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { EditionDetails, EditionInput } from "@/lib/edition-types";
 import { BookCover } from "./book-cover";
+import { applyEditionProposal } from "@/lib/edition-proposals";
 
 const field = "mt-2 block w-full rounded-lg border border-ink/20 bg-white px-3 py-2 font-normal";
 
@@ -75,17 +76,19 @@ export function EditionFields({ bookId, isbn, value, onChange, onExpired, disabl
         <span>I checked the entered details against the evidence. Only reviewed details will appear on the public listing.</span></label>
       <details className="border-t border-ink/10 pt-3">
         <summary className="cursor-pointer text-sm font-medium">Review catalog proposals ({details?.candidates.length ?? 0})</summary>
-        <p className="my-3 text-xs text-ink/60">Search uses the saved full-cover photo on your local PC. Applying a proposal fills its publisher and source; other edition fields remain unknown until you check them.</p>
+        <p className="my-3 text-xs text-ink/60">Use catalog details fills the fields reported by that source and stages its ISBN for review. Missing details stay blank. Check the physical copy before verifying or linking an ISBN.</p>
         <button type="button" className="rounded-full border border-ink/20 px-4 py-2 text-sm" onClick={() => void search()}>{searching ? "Searching…" : "Find proposals from saved cover"}</button>
         {notice && <p role="status" className="mt-3 text-sm text-accent">{notice}</p>}
         <div className="mt-3 space-y-3">{details?.candidates.map(candidate => <article key={candidate.id} className="flex gap-3 rounded-lg border border-ink/10 p-3">
           <BookCover src={candidate.coverUrl} title={candidate.title} className="h-28 w-20 shrink-0 rounded-sm" sizes="80px" />
           <div className="min-w-0 text-sm"><p className="font-medium">{candidate.title}</p><p>{candidate.author}</p><p>{candidate.publisher || "Publisher not recorded"}</p>
+            {candidate.language && <p>Language: {candidate.language}</p>}{candidate.edition && <p>Edition: {candidate.edition}</p>}{candidate.translator && <p>Translator: {candidate.translator}</p>}
             <a className="text-accent underline" href={candidate.source} target="_blank" rel="noopener noreferrer">{candidate.catalog} source</a>
             {candidate.isbn && <p className="mt-1 text-xs text-ink/60">Catalog ISBN: {candidate.isbn} · physical copy unverified</p>}
-            <button type="button" className="mt-2 rounded-full border border-ink/20 px-3 py-1 text-xs" onClick={() => onChange({ ...value,
-              publisher: candidate.publisher, translator: "", language: "", edition: "", evidence: `Publisher proposal from ${candidate.catalog}: ${candidate.source}`,
-              reviewed: false, candidateId: candidate.id, useArtwork: false, linkIsbn: "", isbnConfirmed: false, isbnEvidence: "" })}>Use publisher proposal</button>
+            <button type="button" className="mt-2 rounded-full border border-ink/20 px-3 py-1 text-xs" onClick={() => {
+              onChange(applyEditionProposal(value, candidate));
+              setNotice("Catalog details filled. Review the fields above and ISBN section below before saving. Blank fields were not supplied by this source.");
+            }}>{value.candidateId === candidate.id ? "Catalog details selected" : "Use catalog details"}</button>
             {value.candidateId === candidate.id && <label className="mt-2 flex gap-2 text-xs"><input type="checkbox" checked={value.useArtwork} onChange={event => onChange({ ...value, useArtwork: event.target.checked })} />Use this catalog cover when saving</label>}
           </div>
         </article>)}</div>
@@ -94,6 +97,7 @@ export function EditionFields({ bookId, isbn, value, onChange, onExpired, disabl
         <label className="block text-sm font-medium" htmlFor="edition-isbn">Link the physical copy’s ISBN<input id="edition-isbn" className={field} maxLength={40}
           value={value.linkIsbn} placeholder="ISBN-10 or ISBN-13 from this copy" onChange={event => onChange({ ...value, linkIsbn: event.target.value, isbnConfirmed: false })} /></label>
         {value.linkIsbn && <>
+          <p className="text-xs text-ink/60">The catalog ISBN is staged here. It will only be linked after you check your copy and complete the evidence below. <button type="button" className="underline" onClick={() => onChange({ ...value, linkIsbn: "", isbnConfirmed: false, isbnEvidence: "" })}>Keep ISBN unlinked</button></p>
           <label className="block text-sm" htmlFor="edition-isbn-evidence">ISBN evidence<input id="edition-isbn-evidence" className={field} maxLength={1000} required
             value={value.isbnEvidence} placeholder="Barcode or copyright page checked against this copy" onChange={event => onChange({ ...value, isbnEvidence: event.target.value })} /></label>
           <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1" required checked={value.isbnConfirmed} onChange={event => onChange({ ...value, isbnConfirmed: event.target.checked })} />
