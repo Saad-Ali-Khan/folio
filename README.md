@@ -1,5 +1,103 @@
 # Folio
 
+## Production monitoring and incident response
+
+`npm run monitor:production` performs three unauthenticated, read-only checks:
+the full storefront HTML (including catalog failure text despite HTTP 200), a
+real database-backed availability query using an arbitrary valid book ID, and
+the admin books API's expected HTTP 401. No listing needs to exist at that ID.
+Each failed check retries once after two seconds, with a 30-second deadline per
+request and a 512 KiB response limit. Failures exit nonzero; repeated response
+times above five seconds merit investigation. Diagnostics contain no page bodies,
+customer details, tokens, or database credentials. Override the HTTPS origin with
+`FOLIO_MONITOR_ORIGIN` when testing another deployed environment.
+
+`.github/workflows/production-monitor.yml` runs hourly at minute 23 UTC and can
+also run manually. It needs no repository secrets or npm installation and uses
+read-only repository permission. Standard GitHub-hosted runners are
+[free for public repositories](https://docs.github.com/en/actions/concepts/billing-and-usage).
+Checks make three requests per successful run (about 72/day); a fully failed run
+makes six. These checks can wake Neon; hourly polling allows it to suspend
+between runs. Do not switch database-backed checks to frequent polling without
+reviewing compute usage. This is a basic smoke monitor, not an uptime SLA or a
+checkout, WhatsApp, photo, or local-PC monitor.
+
+After pushing the workflow to `main`:
+
+1. Open GitHub **Settings → Notifications → Actions** and enable email notifications
+   for failed workflows. Account settings and delivery have not been verified.
+2. In the repository **Actions → Folio production checks**, disable and re-enable
+   the workflow from its menu using your own account. This assigns scheduled-run
+   notifications to you, per [GitHub's notification rules](https://docs.github.com/en/actions/concepts/workflows-and-actions/notifications-for-workflow-runs).
+3. Use **Run workflow** normally and confirm the three checks pass. Then optionally
+   select **notification_test** for one manual run. That run intentionally fails
+   after the checks so you can verify email delivery; it does not simulate a real
+   customer transaction or change the storefront. The normal hourly run leaves
+   this option off.
+
+Scheduled runs can be delayed. Public-repository schedules are
+[disabled after 60 days without repository activity](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/disable-and-enable-workflows).
+Check the last successful run weekly. This workflow is prepared and tested
+locally; scheduled execution and email delivery remain pending until activated.
+
+### Usage review and alerts
+
+Availability probes do not measure account allowances. Keep this checklist open
+until the actual Cloudflare and Neon dashboards have been inspected:
+
+| Service | Review | Proposed warning / urgent threshold |
+|---|---|---|
+| Cloudflare | Account-wide daily Worker requests, Worker errors/CPU limits, current plan, and any paid usage | 80% / 90% of the actual account allowance |
+| Neon | Project compute CU-hours, database storage, history and public network transfer; current plan and reset dates | 80% / 90% of each actual included allowance |
+
+Review weekly while traffic is low, daily after a warning, and before bulk photo
+imports. Cloudflare's [Free request limit](https://developers.cloudflare.com/workers/platform/limits/)
+is shared at account level; inspect all Workers, not only Folio.
+For paid accounts, inspect [Billing → Spend limits](https://developers.cloudflare.com/billing/manage/spend-management/)
+and existing notification recipients. Dollar spend alerts do not warn of nearing
+a free request quota. Do not upgrade or enable paid usage just to add monitoring.
+
+In Neon, open the project's **Overview → Usage** and **Organization → Billing**;
+the [usage documentation](https://neon.com/docs/introduction/monitor-usage)
+explains that metrics may lag and transfer usage is visible on the Projects page
+before charges. The [plan table](https://neon.com/docs/introduction/plans)
+lists spending notifications for paid plans, not Free. Thus this change does not
+claim automatic free-tier quota alerts are active. Verify this account's actual
+allowances rather than reusing older estimates; wire available provider alerts
+or a separately authorized usage collector once account access is available.
+
+### Release tracking and rollback
+
+`deploy/cloudflare/release-history.json` records the last verified Worker version
+and source snapshot. After every deployment, append its actual version ID, exact
+source commit (or source snapshot if the commit is unknown), date, migration
+compatibility notes, and successful smoke checks. A GitHub push by itself does
+not deploy this project. Avoid guessing a source commit for an older build.
+
+For an incident, inspect the monitor's failing check, then in the authenticated
+WSL build directory that contains the Folio Wrangler configuration run:
+
+```bash
+npx wrangler deployments list --name folio
+npx wrangler tail folio --format pretty
+```
+
+Inspect timeouts, exception counts, and request IDs privately. Confirm the last
+known good version still exists and works with the current database schema and
+bindings. If reverting code is appropriate, stop the tail with Ctrl+C and run:
+
+```bash
+npx wrangler rollback <VERIFIED_GOOD_VERSION_ID> --name folio
+```
+
+This is an explicit incident action, not an automatic monitor response. Cloudflare
+[rollback](https://developers.cloudflare.com/workers/versions-and-deployments/rollbacks/)
+changes deployed code; it does not roll back Neon data. Check bindings/secrets and
+assets, run `npm run monitor:production` from the source checkout, and check the
+cart and admin manually. Record the resulting deployment and incident outcome.
+For incompatible schema/data damage, use the documented backup/new-database
+recovery procedure; never reverse a live migration merely to satisfy old code.
+
 ## Running local Discord and OCR reliably
 
 From the Folio directory in PowerShell, use Node 24 or newer and the existing

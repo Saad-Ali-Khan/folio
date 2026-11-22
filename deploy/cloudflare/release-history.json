@@ -1,0 +1,14 @@
+{
+  "worker": "folio",
+  "origin": "https://folio.saadalik11.workers.dev",
+  "releases": [
+    {
+      "versionId": "3d1d7633-3771-453c-a8d5-96e0445d994f",
+      "deployedDate": "2026-11-20",
+      "sourceSnapshot": "release-20261120-cover-catalogs",
+      "sourceCommit": null,
+      "verification": "Operator deployment output and independent HTTP 200 checks for home, Odyssey, uploaded photo, admin and cart",
+      "notes": "Last confirmed deployed version; not a live account query. Later local supervision and backup commits do not change the Worker. Recheck deployments before rollback."
+    }
+  ]
+}

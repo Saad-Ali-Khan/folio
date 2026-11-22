@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
+    "monitor:production": "node scripts/monitor-production.mjs",
     "db:generate": "drizzle-kit generate",
     "db:setup": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/setup-db.ts",
     "db:seed": "tsx scripts/seed.ts",

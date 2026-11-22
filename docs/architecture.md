@@ -116,6 +116,36 @@ other paused backlog work. Off-device storage remains deferred.
 
 ## Keeping this knowledge base current
 
+### Production monitoring boundary
+
+The dependency-free `scripts/monitor-production.mjs` checks the existing public
+storefront, database-backed availability endpoint, and unauthenticated admin
+boundary. It performs only GET requests, rejects redirects, bounds response size
+and time, and retries one failed read. Full HTML is consumed so a streamed catalog
+failure with HTTP 200 can fail the check. An empty availability result is healthy:
+the valid positive ID still executes the database query. The monitor needs no
+admin or database credentials and does not create orders, imports, or messages.
+It logs safe status/timing summaries rather than responses or exception details.
+
+The GitHub Actions workflow runs hourly on a standard Linux runner, with read-only
+repository permission and no npm dependency installation. This keeps monitoring
+independent of the local PC and requires no paid monitoring account. Hourly reads
+may wake Neon, but allow autosuspension between runs; low-frequency polling is an
+intentional free-tier tradeoff. GitHub failure email requires the operator's
+notification settings and scheduled-workflow ownership. An explicit manual-only
+notification test fails deliberately without changing production. Schedules can
+be delayed or disabled by GitHub inactivity rules, so these are smoke checks,
+not guaranteed continuous monitoring. Activation/delivery remain unverified.
+
+Cloudflare/Neon account usage is a separate concern. The workflow cannot measure
+CU-hours, account-wide requests, storage, or transfer from public storefront
+responses. Actual allowances, provider alert eligibility, recipients and billing
+controls must be checked in the account dashboards. The proposed warning/urgent
+thresholds are 80%/90%; no account-level alerts are claimed as installed. The
+README documents review steps and rollback; the release-history JSON records
+verified deployments without inventing a source SHA. Rollback stays an explicit
+operator decision because older code may not match current schema or bindings.
+
 ### Local inventory service supervision
 
 `scripts/local-services.ts` supervises the local Next webpack development server

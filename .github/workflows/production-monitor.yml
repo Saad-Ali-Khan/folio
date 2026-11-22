@@ -1,0 +1,46 @@
+name: Folio production checks
+
+on:
+  schedule:
+    # Once per hour, away from the top-of-hour Actions rush. UTC; may be delayed.
+    - cron: '23 * * * *'
+  workflow_dispatch:
+    inputs:
+      notification_test:
+        description: 'Intentionally fail after checks to test your GitHub failure notification'
+        type: boolean
+        default: false
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/production-monitor.yml'
+      - 'scripts/monitor-production.mjs'
+      - 'scripts/test-production-monitor.mjs'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: folio-production-monitor
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Verify the monitor
+        run: node --test scripts/test-production-monitor.mjs
+      - name: Check production without credentials or writes
+        run: node scripts/monitor-production.mjs
+      - name: Test failure notification (explicit manual runs only)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.notification_test }}
+        run: |
+          echo "Intentional notification test. This does not indicate a storefront outage."
+          exit 1
