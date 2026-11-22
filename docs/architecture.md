@@ -135,7 +135,7 @@ intentional free-tier tradeoff. GitHub failure email requires the operator's
 notification settings and scheduled-workflow ownership. An explicit manual-only
 notification test fails deliberately without changing production. Schedules can
 be delayed or disabled by GitHub inactivity rules, so these are smoke checks,
-not guaranteed continuous monitoring. Activation/delivery remain unverified.
+not guaranteed continuous monitoring. Push-triggered and normal manual checks passed on GitHub; the operator confirmed failure-test email delivery on November 22, 2026. The first scheduled run and notification ownership remain to be verified.
 
 Cloudflare/Neon account usage is a separate concern. The workflow cannot measure
 CU-hours, account-wide requests, storage, or transfer from public storefront
@@ -180,6 +180,39 @@ Cloudflare storefront continues to operate separately against the shared databas
 Update this page in the same change whenever routes, rendering, data flows, authentication, integrations, or deployment change. For a significant design decision, record what changed, why, and what it means for running the store. Put proposed changes and unresolved issues in the [backlog](../BACKLOG.md). Keep credentials and customer data out of the documentation.
 
 ### Cover artwork and edition identity
+
+`book_editions` stores structured publisher, translator, language, edition/printing,
+an evidence note, review status, optimistic revision and bounded catalog proposals
+beside the stable `books` row. A separate table keeps older deployed code compatible
+with the additive migration. New cover imports retain close candidate sources and
+artwork even when visual scores are tied; storing proposals never sets reviewed
+fields or a physical ISBN. Refresh runs in the authenticated, same-origin local-only
+`/api/admin/books/edition/candidates` route and is excluded from Cloudflare builds.
+The cloud admin can read/review proposals already stored in Neon. Search is bounded
+by existing catalog/image budgets and three requests per listing per minute.
+
+The admin form saves book edits and edition edits in one transaction. Metadata
+revision and expected ISBN prevent stale saves, including concurrent import or
+candidate refresh. Edition-only changes create no stock movement. Candidate cover
+application is explicit. Changing a structured field clears review in the GUI;
+reviewed values require an evidence note. Public pages render only reviewed,
+nonempty metadata and no longer claim every book is a paperback. Unknown work
+keys display as “Not verified” rather than masquerading as an ISBN. Evidence notes
+and candidate lists remain admin-only. Existing generated description notes are
+preserved; review those notes too when correcting previously unverified details.
+
+Linking a manual work key to a physical ISBN validates the checksum, canonicalizes
+ISBN-10 to ISBN-13 and requires physical-copy attestation plus evidence. The ID,
+slug, photos and order references remain stable; metadata operations never merge
+listings or transfer stock. A collision aborts the entire edit. The immutable SQL
+`folio_isbn_key` function and expression unique index protect canonical aliases
+across concurrent writers. Invalid legacy keys return NULL and retain their raw
+uniqueness constraint. Existing aliases that collide stop migration, rather than
+silently repairing data. Imports match canonical valid ISBNs. Existing different
+ISBNs cannot be replaced in this workflow. Deletion checks metadata revision as
+well as existing book snapshots and reservation/order safeguards; metadata cascades
+only when a safe listing deletion succeeds. Backup/restore regression includes
+the new migration-managed table, function and index.
 
 Cover-only OCR identifies a work and author without verifying publisher, translator, or ISBN. `lib/publisher-cover.ts` and `lib/cover-catalogs.ts` search Readings, Open Library editions, and Google Books concurrently. They require matching title and author (Open Library editions must reference the already identified work), apply recognized visible publisher/imprint clues, and compare up to six candidate covers per source with the uploaded photo using normalized grayscale and exposure-adjusted spatial color layout. Open Library examines the first 40 edition records; Google Books requests 20 search results. Three small crop variants tolerate framing differences. Conservative distance thresholds and a minimum gap between candidates reject weak or ambiguous matches. Repeated catalog ISBN evidence is grouped across sources before checking ambiguity, without assigning that ISBN to inventory. This is an artwork heuristic, not proof of edition identity.
 

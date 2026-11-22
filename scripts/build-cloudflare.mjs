@@ -9,6 +9,7 @@ mkdirSync(output, { recursive: true });
 const stage = mkdtempSync(join(output, "build-"));
 
 const localRoutes = new Set([
+  "app/api/admin/books/edition/candidates",
   "app/api/local",
   "app/api/discord",
   "app/api/sms",

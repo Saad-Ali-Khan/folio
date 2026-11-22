@@ -1,4 +1,6 @@
-import { integer, jsonb, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { integer, jsonb, pgTable, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import type { EditionCandidate } from "../edition-types";
 
 export const books = pgTable("books", {
   id: serial("id").primaryKey(),
@@ -12,7 +14,7 @@ export const books = pgTable("books", {
   coverUrl: text("cover_url"),
   status: text("status").notNull().default("draft"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, table => [uniqueIndex("books_canonical_isbn_unique").on(sql`folio_isbn_key(${table.isbn})`)]);
 
 export const orders = pgTable("orders", {
   id: serial("id").primaryKey(),
@@ -92,6 +94,18 @@ export const discordCommands = pgTable("discord_commands", {
 });
 
 export type Book = typeof books.$inferSelect;
+export const bookEditions = pgTable("book_editions", {
+  bookId: integer("book_id").primaryKey().references(() => books.id, { onDelete: "cascade" }),
+  publisher: text("publisher").notNull().default(""),
+  translator: text("translator").notNull().default(""),
+  language: text("language").notNull().default(""),
+  edition: text("edition").notNull().default(""),
+  evidence: text("evidence").notNull().default(""),
+  reviewStatus: text("review_status").notNull().default("unverified"),
+  candidates: jsonb("candidates").$type<EditionCandidate[]>().notNull().default([]),
+  revision: integer("revision").notNull().default(0),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
 export const bookPhotos = pgTable("book_photos", {
   bookId: integer("book_id").primaryKey().references(() => books.id, { onDelete: "cascade" }),
   data: text("data").notNull(),

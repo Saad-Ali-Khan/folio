@@ -8,7 +8,7 @@ import { AddToCartButton } from "@/components/add-to-cart";
 import { BookCover } from "@/components/book-cover";
 import { getDb } from "@/lib/db";
 import { readWithRetry } from "@/lib/db/read";
-import { bookPhotos, books } from "@/lib/db/schema";
+import { bookEditions, bookPhotos, books } from "@/lib/db/schema";
 import { formatPrice } from "@/lib/format";
 
 // Book pages resolve their slug before rendering so unknown titles get a real
@@ -54,6 +54,10 @@ export default async function BookPage({
   const db = await getDb();
   const [photo] = await readWithRetry(() => db.select({ bookId: bookPhotos.bookId })
     .from(bookPhotos).where(eq(bookPhotos.bookId, book.id)).limit(1));
+  const [edition] = await readWithRetry(() => db.select({ publisher: bookEditions.publisher, translator: bookEditions.translator,
+    language: bookEditions.language, edition: bookEditions.edition, reviewStatus: bookEditions.reviewStatus })
+    .from(bookEditions).where(eq(bookEditions.bookId, book.id)).limit(1));
+  const reviewed = edition?.reviewStatus === "reviewed";
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6">
@@ -121,7 +125,7 @@ export default async function BookPage({
           <dl className="mt-10 grid gap-4 border-t border-ink/10 pt-6 text-sm sm:grid-cols-2">
             <div>
               <dt className="text-ink/50">ISBN</dt>
-              <dd className="mt-0.5 font-mono text-xs">{book.isbn}</dd>
+              <dd className="mt-0.5 font-mono text-xs">{book.isbn.startsWith("manual-") ? "Not verified" : book.isbn}</dd>
             </div>
             <div>
               <dt className="text-ink/50">Availability</dt>
@@ -131,10 +135,8 @@ export default async function BookPage({
                   : "Currently unavailable"}
               </dd>
             </div>
-            <div>
-              <dt className="text-ink/50">Format</dt>
-              <dd className="mt-0.5">Paperback</dd>
-            </div>
+            {reviewed && ([['publisher', 'Publisher'], ['translator', 'Translator'], ['language', 'Language'], ['edition', 'Edition / printing']] as const).map(([key, label]) =>
+              edition[key] ? <div key={key}><dt className="text-ink/50">{label}</dt><dd className="mt-0.5">{edition[key]}</dd></div> : null)}
             <div>
               <dt className="text-ink/50">Shipping</dt>
               <dd className="mt-0.5">Calculated at checkout</dd>

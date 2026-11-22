@@ -1,4 +1,6 @@
 import sharp from "sharp";
+import { createHash } from "node:crypto";
+import { canonicalIsbn } from "./isbn";
 import type { ImportMetadata } from "./import-metadata";
 import { fitsCover, googleBooksCovers, openLibraryCovers, type CoverCandidate } from "./cover-catalogs";
 
@@ -92,11 +94,20 @@ export async function lookupPublisherCover(image: Buffer, meta: ImportMetadata, 
       if (result && result.score < (editions.get(result.candidate.identity)?.score ?? Infinity)) editions.set(result.candidate.identity, result);
     }
     // Reused jackets and near ties remain unverified, even within one publisher.
-    const [best, runnerUp] = [...editions.values()].sort((a, b) => a.score - b.score);
-    if (!best || best.gray > 0.16 || best.color > 0.16 || (runnerUp && runnerUp.score - best.score < 0.035)) return meta;
+    const ranked = [...editions.values()].sort((a, b) => a.score - b.score);
+    const editionCandidates = ranked.filter(result => result.gray <= 0.22 && result.color <= 0.22).slice(0, 5).map(({ candidate }) => ({
+      id: createHash("sha256").update(candidate.source).digest("hex").slice(0, 24),
+      title: candidate.title.slice(0, 300), author: candidate.author.slice(0, 300),
+      publisher: candidate.publisher === "Publisher not recorded" ? "" : candidate.publisher.slice(0, 300),
+      isbn: candidate.identity.startsWith("isbn:") ? canonicalIsbn(candidate.identity.slice(5)) : null,
+      coverUrl: candidate.coverUrl, source: candidate.source, catalog: candidate.catalog,
+    }));
+    const proposed = editionCandidates.length ? { ...meta, editionCandidates } : meta;
+    const [best, runnerUp] = ranked;
+    if (!best || best.gray > 0.16 || best.color > 0.16 || (runnerUp && runnerUp.score - best.score < 0.035)) return proposed;
     const match = best.candidate;
     const note = `Cover artwork visually matched to ${match.title}, published by ${match.publisher}, in ${match.catalog}. Source: ${match.source}. Physical ISBN and translator remain unverified.`;
-    return { ...meta, coverUrl: match.coverUrl, description: note, titleNote: [meta.titleNote, note].filter(Boolean).join(" ") };
+    return { ...proposed, coverUrl: match.coverUrl, description: note, titleNote: [meta.titleNote, note].filter(Boolean).join(" ") };
   } catch {
     // Publisher/network failures must not discard a successful work identification.
     return meta;

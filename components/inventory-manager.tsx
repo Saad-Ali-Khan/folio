@@ -9,6 +9,8 @@ import {CodRequests} from "./cod-requests";
 import {CodOrders} from "./cod-orders";
 import {StockHistory} from "./stock-history";
 import {WhatsAppTest} from "./whatsapp-test";
+import { EditionFields } from "./edition-fields";
+import type { EditionInput } from "@/lib/edition-types";
 
 type InventoryBook={id:number;isbn:string;slug:string;title:string;author:string;description:string;priceCents:number;stock:number;status:string;coverUrl:string|null};
 type Filter='all'|'draft'|'published';
@@ -77,12 +79,14 @@ export function InventoryManager(){
 }
 
 function BookEditor({book,onClose,onSaved,onDeleted,onExpired}:{book:InventoryBook;onClose:()=>void;onSaved:(book:InventoryBook)=>void;onDeleted:(book:InventoryBook)=>void;onExpired:()=>void}){
+ const [editionDetails, setEditionDetails] = useState<EditionInput | null>(null);
+ const [editionBusy, setEditionBusy] = useState(false);
  const [confirmDelete, setConfirmDelete] = useState(false);
  const [deleteError, setDeleteError] = useState("");
  const [stockReason, setStockReason] = useState("");
  const [title,setTitle]=useState(book.title),[author,setAuthor]=useState(book.author),[description,setDescription]=useState(book.description),[price,setPrice]=useState((book.priceCents/100).toFixed(2)),[stock,setStock]=useState(String(book.stock)),[status,setStatus]=useState(book.status),[busy,setBusy]=useState(false),[error,setError]=useState('');
  useEffect(()=>{const previous=document.body.style.overflow;document.body.style.overflow='hidden';const element=document.getElementById('edit-title');element?.focus();return()=>{document.body.style.overflow=previous;};},[]);
- async function save(event:FormEvent){event.preventDefault();setBusy(true);setError('');try{const res=await fetch('/api/admin/books',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:book.id,title,author,description,price,stock:Number(stock),stockReason,status,expected:book})});const data=await res.json();if(res.status===401){onExpired();return;}if(!res.ok)throw Error(data.error);onSaved(data.book);}catch(e){setError(e instanceof Error?e.message:'Unable to save.');}finally{setBusy(false);}}
+ async function save(event:FormEvent){event.preventDefault();if(busy || !editionDetails || editionBusy)return;setBusy(true);setError('');try{const res=await fetch('/api/admin/books',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:book.id,title,author,description,price,stock:Number(stock),stockReason,status,expected:book,editionDetails})});const data=await res.json();if(res.status===401){onExpired();return;}if(!res.ok)throw Error(data.error);onSaved(data.book);}catch(e){setError(e instanceof Error?e.message:'Unable to save.');}finally{setBusy(false);}}
  async function removeBook() {
   setBusy(true);
   setDeleteError("");
@@ -90,7 +94,7 @@ function BookEditor({book,onClose,onSaved,onDeleted,onExpired}:{book:InventoryBo
    const response = await fetch("/api/admin/books", {
     method: "DELETE",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ expected: book }),
+    body: JSON.stringify({ expected: book, expectedEditionRevision: editionDetails?.expectedRevision }),
    });
    if (response.status === 401) { onExpired(); return; }
    const data = await response.json();
@@ -113,14 +117,15 @@ function BookEditor({book,onClose,onSaved,onDeleted,onExpired}:{book:InventoryBo
     required maxLength={200} placeholder="Physical count correction, damaged copy, or received stock" />
   </label>}
   <label className="block text-sm font-medium" htmlFor="edit-description">Description<textarea id="edit-description" rows={5} className={`${field} resize-y`} value={description} onChange={e=>setDescription(e.target.value)} maxLength={10000}/></label>
+  <EditionFields bookId={book.id} isbn={book.isbn} value={editionDetails} onChange={setEditionDetails} onExpired={onExpired} disabled={busy} onSearchingChange={setEditionBusy} />
   <label className="block text-sm font-medium" htmlFor="edit-status">Visibility<select id="edit-status" className={field} value={status} onChange={e=>setStatus(e.target.value)}><option value="draft">Draft — only visible in inventory</option><option value="published">Published — visible in the shop</option></select></label>
   {status==='published'&&<p className="rounded-lg bg-parchment p-3 text-xs leading-relaxed text-ink/60">Publishing makes this edition available in the shop. Check its author, price, and stock before saving.</p>}
   {error&&<p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
-  <div className="flex gap-3 border-t border-ink/10 pt-5"><button className={primary} disabled={busy}>{busy?'Saving…':status==='published'?'Save & publish':'Save draft'}</button><button className="rounded-full border border-ink/15 px-5 py-2.5 text-sm" type="button" onClick={onClose} disabled={busy}>Cancel</button></div>
+  <div className="flex gap-3 border-t border-ink/10 pt-5"><button className={primary} disabled={busy || !editionDetails || editionBusy}>{busy?'Saving…':status==='published'?'Save & publish':'Save draft'}</button><button className="rounded-full border border-ink/15 px-5 py-2.5 text-sm" type="button" onClick={onClose} disabled={busy || editionBusy}>Cancel</button></div>
  </form>
  <StockHistory bookId={book.id} onExpired={onExpired} />
  <div className="mt-7 border-t border-ink/10 pt-5">
-  <button type="button" disabled={busy} aria-expanded={confirmDelete} aria-controls="delete-book-confirmation" onClick={() => { setConfirmDelete(!confirmDelete); setDeleteError(""); }} className="text-sm font-medium text-red-700 hover:underline disabled:opacity-50">
+  <button type="button" disabled={busy || !editionDetails || editionBusy} aria-expanded={confirmDelete} aria-controls="delete-book-confirmation" onClick={() => { setConfirmDelete(!confirmDelete); setDeleteError(""); }} className="text-sm font-medium text-red-700 hover:underline disabled:opacity-50">
    {confirmDelete ? "Cancel deletion" : "Delete book"}
   </button>
   {confirmDelete && <div id="delete-book-confirmation" className="mt-3 rounded-lg border border-red-200 bg-red-50 p-4">

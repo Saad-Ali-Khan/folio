@@ -25,7 +25,7 @@ checkout, WhatsApp, photo, or local-PC monitor.
 After pushing the workflow to `main`:
 
 1. Open GitHub **Settings → Notifications → Actions** and enable email notifications
-   for failed workflows. Account settings and delivery have not been verified.
+   for failed workflows. The operator confirmed test email delivery on November 22, 2026.
 2. In the repository **Actions → Folio production checks**, disable and re-enable
    the workflow from its menu using your own account. This assigns scheduled-run
    notifications to you, per [GitHub's notification rules](https://docs.github.com/en/actions/concepts/workflows-and-actions/notifications-for-workflow-runs).
@@ -38,7 +38,7 @@ After pushing the workflow to `main`:
 Scheduled runs can be delayed. Public-repository schedules are
 [disabled after 60 days without repository activity](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/disable-and-enable-workflows).
 Check the last successful run weekly. This workflow is prepared and tested
-locally; scheduled execution and email delivery remain pending until activated.
+locally and passed on GitHub. The operator confirmed failure-test email delivery on November 22, 2026; the first hourly scheduled run remains to be verified.
 
 ### Usage review and alerts
 
@@ -97,6 +97,52 @@ assets, run `npm run monitor:production` from the source checkout, and check the
 cart and admin manually. Record the resulting deployment and incident outcome.
 For incompatible schema/data damage, use the documented backup/new-database
 recovery procedure; never reverse a live migration merely to satisfy old code.
+
+## Reviewing a book's edition
+
+Open **Admin → Edit → Edition details** to enter publisher, translator, language
+and edition/printing. Leave unknown values blank. Record the physical page or
+reliable edition URL under **Sources / evidence**; check the verification box
+only after reviewing the entered details. These values save atomically with the
+existing book form. Only reviewed, nonempty values appear on the public detail
+page. A title/cover match never establishes a translator. The old unconditional
+“Paperback” label has been removed because the format was not verified.
+
+Expand **Review catalog proposals** to compare stored covers and source links.
+New cover imports retain up to five close artwork candidates, including near
+ties that could not be chosen automatically. Up to ten proposals are retained
+per listing. **Find proposals from saved cover** runs only in the local admin
+(the photo must already be saved); Cloudflare admin can review saved proposals.
+The local search uses the existing Readings, Open Library and Google Books
+adapters, with no new paid service, and allows three searches per listing per
+minute. An outage or lack of a close match can leave no proposals; it is not
+proof that no edition exists. Translators and missing language/edition data
+must still be checked from reliable evidence.
+
+**Use publisher proposal** fills the proposed publisher/source, clears unsupported
+translator/language/edition fields, and clears verification. Applying its cover
+is a separate checkbox. Nothing applies until you save the book; candidate ISBNs
+are informational and never copied automatically. Search stores proposals only,
+without modifying the listing, stock, prices, photos, or reviewed fields.
+
+A cover-only listing also offers **Link the physical copy's ISBN**. Enter an
+ISBN-10 or ISBN-13, record where you checked it on this copy, and confirm the
+physical check. ISBN checksums are validated and ISBN-10 is stored as equivalent
+ISBN-13. The book ID, slug, stock, uploaded photograph and order links stay intact.
+An ISBN already linked to another listing stops the entire save with HTTP 409,
+including any staged title/price/stock edits; no automatic merge or restock occurs.
+Replacing an existing different ISBN is deliberately unsupported. The database
+also rejects ISBN-10/13 aliases even during simultaneous imports. Discord imports
+recognize those aliases as the same verified ISBN edition.
+
+Migration `0012_book_editions.sql` adds a separate metadata table so older Worker
+code can continue using `books`. Migration `0013_canonical_isbn.sql` adds the
+canonical-key function and unique index. Back up first, then run `npm run db:setup`
+before starting/deploying this UI. If existing equivalent ISBNs collide, migration
+fails and rolls back; review them rather than merging automatically. The new UI
+requires these migrations. Existing books are not backfilled with guessed data.
+Run `npx tsx scripts/test-book-editions.ts` for metadata, stale-edit, ISBN-alias,
+transaction rollback, deletion and stock-protection checks.
 
 ## Running local Discord and OCR reliably
 
@@ -816,8 +862,9 @@ Refresh. Drafts stay hidden from shoppers.
 Use **Edit**, review details and the PKR price, choose Published under Visibility,
 and select **Save & publish**. Set Visibility back to Draft to unpublish.
 Stock changes are audited; conflicting edits are rejected rather than overwriting
-changes made by checkout or Discord. ISBN and slug are shown read-only to keep
-edition identity stable.
+changes made by checkout or Discord. Slug and already-linked ISBN identity stay
+read-only; cover-only work keys can be linked to a physically verified ISBN
+through the separate evidence and collision safeguards described above.
 
 Open an edition's editor and choose **Load history** under **Stock history**
 to review the date, quantity before and after the change, and reason. Changing

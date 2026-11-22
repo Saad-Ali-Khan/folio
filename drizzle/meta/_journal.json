@@ -85,6 +85,20 @@
       "when": 1795070264292,
       "tag": "0011_book_photos",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1795326124015,
+      "tag": "0012_book_editions",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1795326165958,
+      "tag": "0013_canonical_isbn",
+      "breakpoints": true
     }
   ]
 }

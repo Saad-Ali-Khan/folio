@@ -2,6 +2,7 @@ import {and,eq,sql} from "drizzle-orm";
 import type {Database} from "./db";
 import {books} from "./db/schema";
 import { MAX_BOOK_PRICE_PKR } from "./store-policy";
+import { EditionError, getEdition, parseEditionInput, saveEdition } from "./book-editions";
 export class AdminBookError extends Error {constructor(message:string,public status=400){super(message);}}
 
 export async function deleteAdminBook(db: Database, input: unknown) {
@@ -14,18 +15,29 @@ export async function deleteAdminBook(db: Database, input: unknown) {
     throw new AdminBookError("Reload the book before deleting it.");
   }
 
+  const snapshot = { id: expected.id, title: expected.title, author: expected.author, description: expected.description,
+    status: expected.status, stock: expected.stock, priceCents: expected.priceCents,
+    isbn: typeof expected.isbn === "string" ? expected.isbn : undefined };
   try {
-    const [removed] = await db.delete(books).where(and(
-      eq(books.id, expected.id),
-      eq(books.title, expected.title),
-      eq(books.author, expected.author),
-      eq(books.description, expected.description),
-      eq(books.status, expected.status),
-      eq(books.stock, expected.stock),
-      eq(books.priceCents, expected.priceCents),
+    return await db.transaction(async tx => {
+    const [current] = await tx.select({ id: books.id }).from(books).where(eq(books.id, expected.id as number)).for("update");
+    if (!current) throw new AdminBookError("This book was already deleted. Refresh inventory.", 409);
+    const edition = await getEdition(tx as unknown as Database, current.id);
+    const expectedRevision = (input as { expectedEditionRevision?: unknown }).expectedEditionRevision;
+    if (edition.revision > 0 && expectedRevision !== edition.revision) throw new AdminBookError("Edition details changed. Reload the book before deleting it.", 409);
+    const [removed] = await tx.delete(books).where(and(
+      eq(books.id, snapshot.id),
+      snapshot.isbn ? eq(books.isbn, snapshot.isbn) : undefined,
+      eq(books.title, snapshot.title),
+      eq(books.author, snapshot.author),
+      eq(books.description, snapshot.description),
+      eq(books.status, snapshot.status),
+      eq(books.stock, snapshot.stock),
+      eq(books.priceCents, snapshot.priceCents),
     )).returning({ id: books.id });
     if (!removed) throw new AdminBookError("This book changed or was already deleted. Refresh inventory and try again.", 409);
     return removed;
+    });
   } catch (error) {
     // Drizzle can wrap PostgreSQL errors in one or more causes.
     let cause: unknown = error;
@@ -44,6 +56,7 @@ export async function deleteAdminBook(db: Database, input: unknown) {
 export async function updateAdminBook(db:Database,input:unknown){
  if(!input || typeof input!=='object')throw new AdminBookError('Invalid book.');
  const raw=input as Record<string,unknown>;
+ const edition = raw.editionDetails === undefined ? undefined : parseEditionInput(raw.editionDetails);
  const text=(key:string,max:number)=>{const v=raw[key];if(typeof v!=='string'||v.length>max)throw new AdminBookError(`Invalid ${key}.`);return v.trim();};
  const id=raw.id;
  if(!Number.isSafeInteger(id)||Number(id)<1)throw new AdminBookError('Invalid book ID.');
@@ -68,6 +81,16 @@ export async function updateAdminBook(db:Database,input:unknown){
   const [updated]=await tx.update(books).set({title,author,description,priceCents,stock:Number(stock),status})
    .where(and(eq(books.id,Number(id)),eq(books.title,expected.title as string),eq(books.author,expected.author as string),eq(books.description,expected.description as string),eq(books.priceCents,Number(expected.priceCents)),eq(books.stock,Number(expected.stock)),eq(books.status,expected.status as string))).returning();
   if(!updated)throw new AdminBookError('This book changed while you were editing. Reload the inventory and try again.',409);
-  return updated;
+  return edition ? await saveEdition(tx as unknown as Database, Number(id), edition) : updated;
+ }).catch(error => {
+  let cause: unknown = error;
+  while (cause && typeof cause === "object") {
+   if ("code" in cause && cause.code === "23505" && "constraint" in cause &&
+    (cause.constraint === "books_canonical_isbn_unique" || cause.constraint === "books_isbn_unique")) {
+     throw new EditionError("This ISBN was linked to another listing. Refresh inventory; nothing was merged or restocked.", 409);
+   }
+   cause = "cause" in cause ? cause.cause : undefined;
+  }
+  throw error;
  });
 }

@@ -1,4 +1,7 @@
 import {lookupImportMetadata} from "./import-metadata";
+import { storeEditionCandidates } from "./book-editions";
+import type { EditionCandidate } from "./edition-types";
+import { canonicalIsbn } from "./isbn";
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import { and, eq, gte, sql } from "drizzle-orm";
 import type { Database } from "@/lib/db";
@@ -67,6 +70,7 @@ export async function executeCommand(
 }
 
 export type BookMetadata = {
+  editionCandidates?: EditionCandidate[];
   title: string;
   author: string;
   isbn: string | null;
@@ -115,6 +119,8 @@ export async function createBook(
     await db.insert(bookPhotos).values({ bookId: created.id, data: meta.uploadedCover });
   }
 
+  if (meta.editionCandidates?.length) await storeEditionCandidates(db, created.id, meta.editionCandidates);
+
   return { title: created.title, slug: created.slug, stock: created.stock };
 }
 
@@ -152,7 +158,8 @@ export async function importDiscordBook(db: Database, messageId: string, channel
   // Serialize imports of the same edition across different Discord messages.
   await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${editionKey ?? meta.title.toLowerCase()}))`);
   const [existing, other] = await tx.select().from(books)
-   .where(editionKey ? eq(books.isbn, editionKey) : sql`lower(${books.title}) = ${meta.title.toLowerCase()}`).limit(2);
+   .where(meta.isbn && canonicalIsbn(meta.isbn) ? sql`folio_isbn_key(${books.isbn}) = ${canonicalIsbn(meta.isbn)}`
+    : editionKey ? eq(books.isbn, editionKey) : sql`lower(${books.title}) = ${meta.title.toLowerCase()}`).limit(2);
   if (other) throw new AmbiguousInventoryTitle();
   if (existing) {
    const [updated] = await tx.update(books).set({stock: sql`${books.stock} + ${qty}`})
@@ -163,6 +170,7 @@ export async function importDiscordBook(db: Database, messageId: string, channel
     await tx.insert(bookPhotos).values({ bookId: updated.id, data: meta.uploadedCover })
      .onConflictDoUpdate({ target: bookPhotos.bookId, set: { data: meta.uploadedCover } });
    }
+   if (meta.editionCandidates?.length) await storeEditionCandidates(tx as unknown as Database, updated.id, meta.editionCandidates);
    return updated;
   }
   return createBook(tx as unknown as Database, meta, qty);
