@@ -32,8 +32,8 @@ script execution is blocked, use the manual launcher for now rather than changin
 machine security policy. Remove the task with
 `powershell.exe -NoProfile -File scripts/install-local-startup.ps1 -Remove`.
 The installer refuses to overwrite an existing task. Reinstall after moving the
-project or replacing the Node executable. Startup installation has not yet been
-verified on the operator's Windows account.
+project or replacing the Node executable. The operator installed the task successfully; automatic startup after the next
+Windows logon remains to be verified.
 
 The supervisor retries crashes with exponential delay (up to 60 seconds), waits
 through startup compilation, and restarts a bot whose Gateway readiness or

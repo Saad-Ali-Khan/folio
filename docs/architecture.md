@@ -143,7 +143,7 @@ Logs redact configured secret values and database URLs, assemble complete lines
 before redaction, drop oversized lines, and rotate at 5 MiB with two archives per
 component. A prepared current-user, limited-privilege Windows logon task launches
 hidden and avoids storing credentials. Its installation was blocked in the agent
-environment; actual registration and a post-logon check remain backlog work.
+environment, but the operator subsequently registered it successfully. A post-logon check remains backlog work.
 PC sleep, logout, network loss, or shutdown can still interrupt imports. The
 Cloudflare storefront continues to operate separately against the shared database.
 
