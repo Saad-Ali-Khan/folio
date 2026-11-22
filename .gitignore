@@ -44,4 +44,6 @@ next-env.d.ts
 # local embedded database (PGlite fallback)
 /.pglite/
 /.folio-cloudflare/
+/.folio-backups/
+/.folio-backup-key
 .neon

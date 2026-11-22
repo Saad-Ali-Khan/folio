@@ -57,6 +57,48 @@ The [build script](../scripts/build-cloudflare.mjs) stages a fresh copy of the a
 
 The Worker receives `DATABASE_URL`, `ADMIN_PIN`, `ADMIN_SESSION_SECRET`, and `COD_WHATSAPP_NUMBER` as runtime secrets. Its [database adapter](../deploy/cloudflare/db.ts) uses Drizzle and Neon’s WebSocket driver to support interactive transactions. Database migrations run separately from the Worker deployment. See the [OpenNext Cloudflare adapter](https://opennext.js.org/cloudflare) and [Neon serverless driver](https://neon.com/docs/serverless/serverless-driver#use-the-driver-over-websockets).
 
+## Application backup and isolated recovery
+
+`scripts/backup.ts` creates encrypted, compressed Folio application bundles using
+the existing database transport. Snapshot reads run in one repeatable-read,
+read-only transaction and include all public tables, uploaded cover data,
+applied migration sources, and sequence state. Each table has a canonical row
+checksum. The recovery SQL reconstructs an empty database from those migrations,
+loads parent tables before dependent rows with user audit triggers temporarily
+disabled, reenables the triggers, and restores sequence values without reusing
+numbers consumed by deleted test records. It refuses a nonempty public schema.
+
+Verification executes that exact SQL against a fresh in-memory PGlite database;
+it never accepts a production restore target. Full row checksums, columns,
+photos, and sequence values are checked before emitting a verification report.
+AES-256-GCM authenticates the archive; bad keys and modified ciphertext fail
+before any SQL is executed. The key and archives are excluded from Git. SQL
+export requires `--allow-plaintext` because the resulting recovery file contains
+private customer data. Keep off-device archive and key copies separately.
+
+This provides a recovery path while native PostgreSQL clients are unavailable
+on the operator's PC. It covers Folio's migration-managed public schema, not
+roles, account configuration, arbitrary extensions, non-public schemas, or
+Cloudflare runtime secrets. The exporter refuses source application relations
+over 64 MiB; native unpooled `pg_dump` is the documented path for larger or
+independently managed databases. A fresh-target recovery and a verified cutover
+are the rollback procedure; the tool does not overwrite production or reverse
+individual migrations. Account-specific Neon retention, off-device copies, and
+backup scheduling remain operational follow-ups in the backlog.
+
+On November 21, the first live application backup restored successfully into
+isolated PGlite: 15 tables, 106 rows, two uploaded photos, and seven sequences
+matched. Source Postgres was 18.7 and the restore engine was 18.6. The exact
+generated recovery SQL was reverified against the saved encrypted archive after
+implementation. No plaintext recovery file was exported and production was
+read only. Tests also cover authenticated encryption failure, nonempty-target
+refusal, pending-migration exclusion, schema drift, and sequence gaps. The
+archive and local key still need separate off-device storage, and the Neon
+project's configured history window has not been inspected. A daily reminder
+was subsequently configured for 9 PM America/Toronto, prompting the operator
+to run the backup command manually. It does not execute backups or resume
+other paused backlog work. Off-device storage remains deferred.
+
 ## Design decisions
 
 | Decision | Reason and operational effect |
@@ -87,3 +129,9 @@ On November 20, 2026, the Odyssey listing's incorrect Stephen Mitchell artwork w
 ### Production release, November 20, 2026
 
 Cloudflare Worker version `3d1d7633-3771-453c-a8d5-96e0445d994f` was deployed from the prepared `release-20261120-cover-catalogs` Linux source snapshot. The deployment checks returned HTTP 200 for the home page, Odyssey book page, uploaded photo, admin sign-in page, and cart. Independent requests also verified the matching Readings artwork, second-photo URL, edition uncertainty note, and the 134,864-byte uploaded image. These are read-only checks; no checkout, stock adjustment, or authenticated admin write was performed during deployment verification. Discord, OCR, and artwork discovery remain local services against the shared database, as designed.
+
+On November 21, production title editing was verified by the operator in Chrome, including saving a temporary title and restoring it. An independent reload confirmed the restored draft and all original editor fields, with stock still at nine copies. The in-app browser had returned “Failed to fetch” for its save attempt; Chrome completed both saves. Treat an ambiguous save response as unknown until reloading and checking the saved state, rather than resubmitting immediately. Subsequent publishing, stock, and order API verification is recorded below.
+
+Later on November 21, authenticated production API checks passed for publishing and stock adjustments using disposable listing #121. Missing price and missing adjustment reason were rejected; a positive-price, zero-stock listing rendered as sold out; returning it to draft produced 404; draft stock changes persisted with audit reasons and were restored to zero. The operator entered the admin code privately through a local PowerShell runner. Cleanup deleted the fixture, and independent queries verified all 23 original listings against their pre-test checksum and retained the synthetic adjustment audit records. No customer order was touched. These API checks complement the Chrome title-edit check.
+
+Fulfillment and returns were then verified through the production APIs using three seeded synthetic orders (#4–6) and hidden listings (#122–124). The checks covered cancellation and one-time stock restoration, packing, required tracking, shipment, delivery, stale snapshots and invalid transitions, refusal, receipt without automatic restocking, item ownership, quantity caps, partial returns, and safe replay of inspected-copy restocks. All 13 checks passed. Cleanup removed the synthetic orders, lines, return claims, and listings; an independent database comparison confirmed the original books, orders, order lines, and returns matched their pre-test checksums. Synthetic stock audit records remain. No customer messages, courier bookings, cash settlement, or remittance occurred. Fixtures were seeded directly, so these checks validate fulfillment endpoints rather than creation of a new checkout or WhatsApp approval.

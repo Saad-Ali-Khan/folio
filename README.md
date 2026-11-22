@@ -744,6 +744,62 @@ Cover-only imports check Readings, Open Library edition records, and Google Book
 
 ## Staging and production setup
 
+### Application backups and recovery
+
+Run `npm run backup:create` from the repository root. It reads production in a
+repeatable-read, read-only transaction, saves a gzip-compressed AES-256-GCM
+archive under `.folio-backups`, and verifies the exact recovery SQL against a
+new in-memory PGlite database. Every public application table, stored photo,
+applied migration, and public sequence is included. Row checksums, column
+layouts, and sequence state must match before a `.verified.json` report is
+written. Pending, unapplied migration files are excluded, so this also works
+before applying a new migration.
+
+The first run creates `.folio-backup-key`; alternatively provide the same
+32-byte base64 key through `FOLIO_BACKUP_KEY`. The key and backup directory are
+ignored by Git. Keep the key private and make a separate, safe copy: losing it
+makes the encrypted archives unrecoverable. A backup and key on the same PC
+do not protect against losing that PC. Off-device storage is deferred. A Codex
+reminder prompts for a manual backup daily at 9 PM America/Toronto; it does not
+run the command. No automatic backup job has been installed. Also create a
+backup before bulk imports or deployments.
+
+Recheck an archive with:
+
+```powershell
+npm run backup:verify -- ".folio-backups\BACKUP_NAME.foliobackup"
+```
+
+For disaster recovery, use a **new empty Postgres database**. This command
+explicitly creates a private, plaintext SQL recovery file next to the archive:
+
+```powershell
+npm run backup:recover-sql -- ".folio-backups\BACKUP_NAME.foliobackup" --allow-plaintext
+```
+
+Install the official PostgreSQL client tools, configure `PGHOST`, `PGDATABASE`,
+`PGUSER`, and SSL/authentication for the new target privately, then run
+`psql -X -v ON_ERROR_STOP=1 -f "PATH_TO_BACKUP.foliobackup.recovery.sql"`.
+The SQL refuses a nonempty public schema, recreates the applied migrations,
+restores data in foreign-key order without generating duplicate stock audit
+rows, restores sequences (including gaps), and commits atomically. Verify the
+new database and storefront before changing the live `DATABASE_URL`. Do not
+apply it to production as an in-place migration rollback. After a bad
+migration, preserve the affected database and recover the pre-migration backup
+into a new target; reconcile any legitimate orders received since the backup
+before cutting over. Remove plaintext recovery files after use.
+
+This is a Folio application recovery bundle, not a full PostgreSQL cluster
+dump. Roles, permissions, extensions outside the migration files, non-public
+schemas, Neon account settings, and runtime secrets are not included. Source
+data over 64 MiB is refused by this bounded in-memory exporter; use native
+`pg_dump` for larger databases or independently managed schema objects. For
+native exports, Neon recommends a direct/unpooled connection and the
+`pg_dump`/`pg_restore` tools. See [Neon's backup guide](https://neon.com/docs/manage/backup-pg-dump)
+and [history-window documentation](https://neon.com/docs/postgres/backup-restore/history-window).
+The project's configured history window must be checked in its console; the
+documented plan limit does not prove that this particular account has it enabled.
+
 ### Cloudflare Workers
 
 Run `npm run build:cloudflare` from the repository root on Linux to create
