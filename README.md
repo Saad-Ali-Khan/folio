@@ -38,7 +38,7 @@ After pushing the workflow to `main`:
 Scheduled runs can be delayed. Public-repository schedules are
 [disabled after 60 days without repository activity](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/disable-and-enable-workflows).
 Check the last successful run weekly. This workflow is prepared and tested
-locally and passed on GitHub. The operator confirmed failure-test email delivery on November 22, 2026; the first hourly scheduled run remains to be verified.
+locally and passed on GitHub. The operator confirmed failure-test email delivery on November 22, 2026; three recent scheduled runs were independently verified successful on November 23 under the operator's GitHub actor.
 
 ### Usage review and alerts
 
@@ -118,6 +118,12 @@ adapters, with no new paid service, and allows three searches per listing per
 minute. An outage or lack of a close match can leave no proposals; it is not
 proof that no edition exists. Translators and missing language/edition data
 must still be checked from reliable evidence.
+
+Review proposals tolerate more framing/exposure variation than automatic cover
+selection. Such results carry **Possible cover match** warnings. The automatic
+artwork threshold stays strict; a possible match does not verify the physical
+edition or ISBN. This handles photographed paper whose lighting/background differ
+from a digital cover without silently substituting the edition.
 
 **Use catalog details** fills publisher/source and any translator, language and
 edition details explicitly supplied by the catalog, clears unsupported fields,

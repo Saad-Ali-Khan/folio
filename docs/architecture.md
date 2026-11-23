@@ -135,7 +135,7 @@ intentional free-tier tradeoff. GitHub failure email requires the operator's
 notification settings and scheduled-workflow ownership. An explicit manual-only
 notification test fails deliberately without changing production. Schedules can
 be delayed or disabled by GitHub inactivity rules, so these are smoke checks,
-not guaranteed continuous monitoring. Push-triggered and normal manual checks passed on GitHub; the operator confirmed failure-test email delivery on November 22, 2026. The first scheduled run and notification ownership remain to be verified.
+not guaranteed continuous monitoring. Push-triggered and normal manual checks passed on GitHub; the operator confirmed failure-test email delivery on November 22, 2026. On November 23, three recent scheduled runs were verified successful under actor Saad-Ali-Khan; scheduled execution and operator attribution are confirmed.
 
 Cloudflare/Neon account usage is a separate concern. The workflow cannot measure
 CU-hours, account-wide requests, storage, or transfer from public storefront
@@ -214,6 +214,16 @@ translator contributors, language and edition name; Google Books contributes
 language and labeled publication year. Old stored proposals remain valid but need
 a refresh to gain these fields. A pure client staging helper is regression-tested
 for populated fields, missing metadata, and retention of all ISBN protections.
+
+The November 23 Little Prince GUI check exposed an overly strict proposal filter:
+the actual saved photo and the matching Readings jacket had grayscale distance
+about 0.279 and exposure-adjusted color distance about 0.120, outside the former
+review pool despite matching artwork. Review-only proposals now also accept gray
+distance up to 0.32 when color distance is at most 0.18, in addition to the old
+0.22/0.22 pool. They are labeled possible; the automatic 0.16/0.16 criteria and
+runner-up gap are unchanged. A direct read-only replay of the actual photo found
+Readings record 950841 with English and paperback/published 2016, without assigning
+a cover or ISBN. Framing/exposure and wrong-cover regressions protect that boundary.
 
 Linking a manual work key to a physical ISBN validates the checksum, canonicalizes
 ISBN-10 to ISBN-13 and requires physical-copy attestation. The server records that confirmation and a matching stored catalog source automatically; the operator may add an optional note. The ID,

@@ -96,13 +96,17 @@ export async function lookupPublisherCover(image: Buffer, meta: ImportMetadata, 
     }
     // Reused jackets and near ties remain unverified, even within one publisher.
     const ranked = [...editions.values()].sort((a, b) => a.score - b.score);
-    const closeCandidates = await Promise.all(ranked.filter(result => result.gray <= 0.22 && result.color <= 0.22).slice(0, 5)
-      .map(({ candidate }) => enrichReadingsEdition(candidate, boundedFetch, signal)));
-    const editionCandidates = closeCandidates.map(candidate => ({
+    // Review proposals tolerate lighting/framing differences more than automatic artwork selection.
+    // Keep the strict automatic threshold below unchanged; a proposal never establishes an edition.
+    const reviewMatches = ranked.filter(result => (result.gray <= 0.22 && result.color <= 0.22) ||
+      (result.gray <= 0.32 && result.color <= 0.18)).slice(0, 5);
+    const closeCandidates = await Promise.all(reviewMatches.map(({ candidate }) => enrichReadingsEdition(candidate, boundedFetch, signal)));
+    const editionCandidates = closeCandidates.map((candidate, index) => ({
       id: createHash("sha256").update(candidate.source).digest("hex").slice(0, 24),
       title: candidate.title.slice(0, 300), author: candidate.author.slice(0, 300),
       publisher: candidate.publisher === "Publisher not recorded" ? "" : candidate.publisher.slice(0, 300),
       translator: candidate.translator ?? "", language: candidate.language ?? "", edition: candidate.edition ?? "",
+      matchQuality: reviewMatches[index].gray <= 0.16 && reviewMatches[index].color <= 0.16 ? "close" as const : "possible" as const,
       isbn: candidate.identity.startsWith("isbn:") ? canonicalIsbn(candidate.identity.slice(5)) : null,
       coverUrl: candidate.coverUrl, source: candidate.source, catalog: candidate.catalog,
     }));

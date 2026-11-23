@@ -6,6 +6,7 @@ export type EditionCandidate = {
   translator?: string;
   language?: string;
   edition?: string;
+  matchQuality?: "close" | "possible";
   isbn: string | null;
   coverUrl: string;
   source: string;

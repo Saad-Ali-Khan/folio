@@ -82,6 +82,7 @@ export function EditionFields({ bookId, isbn, value, onChange, onExpired, disabl
         <div className="mt-3 space-y-3">{details?.candidates.map(candidate => <article key={candidate.id} className="flex gap-3 rounded-lg border border-ink/10 p-3">
           <BookCover src={candidate.coverUrl} title={candidate.title} className="h-28 w-20 shrink-0 rounded-sm" sizes="80px" />
           <div className="min-w-0 text-sm"><p className="font-medium">{candidate.title}</p><p>{candidate.author}</p><p>{candidate.publisher || "Publisher not recorded"}</p>
+            {candidate.matchQuality === "possible" && <p className="my-1 text-xs text-amber-800">Possible cover match — compare the artwork and physical edition before using these details.</p>}
             {candidate.language && <p>Language: {candidate.language}</p>}{candidate.edition && <p>Edition: {candidate.edition}</p>}{candidate.translator && <p>Translator: {candidate.translator}</p>}
             <a className="text-accent underline" href={candidate.source} target="_blank" rel="noopener noreferrer">{candidate.catalog} source</a>
             {candidate.isbn && <p className="mt-1 text-xs text-ink/60">Catalog ISBN: {candidate.isbn} · physical copy unverified</p>}

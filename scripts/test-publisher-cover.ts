@@ -38,6 +38,12 @@ async function main() {
     assert.match(match.description!, /https:\/\/readings.com.pk\/book\/123/);
     assert.equal(match.editionCandidates?.[0].language, "English");
     assert.equal(match.editionCandidates?.[0].edition, "Paperback · published 2023");
+    const framedPhoto = await sharp(cover).extend({ left: 80, right: 80, top: 0, bottom: 0, background: "#555544" })
+      .modulate({ brightness: 0.7 }).jpeg().toBuffer();
+    const reviewOnly = await lookupPublisherCover(framedPhoto, meta, []);
+    assert.equal(reviewOnly.coverUrl, null, "framing/exposure uncertainty must not weaken automatic cover selection");
+    assert.equal(reviewOnly.isbn, null);
+    assert.equal(reviewOnly.editionCandidates?.[0].matchQuality, "possible", "uncertain photographs can be reviewed with an explicit warning");
     catalogImage = other;
     assert.equal((await lookupPublisherCover(cover, meta, [])).coverUrl, null, "same title and author with different artwork is rejected");
     catalogImage = cover;
