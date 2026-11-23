@@ -3,12 +3,12 @@
   "origin": "https://folio.saadalik11.workers.dev",
   "releases": [
     {
-      "versionId": null,
+      "versionId": "3265780b-d44b-417d-8a85-c3e32a276c1a",
       "deployedDate": "2026-11-23",
       "sourceSnapshot": "release-cataloging-20261123-o3WaNu",
       "sourceCommit": "d89764720a10b6e58be8ef368fb69d4823ee468f",
       "verification": "Operator Linux build/deploy and all public/auth-boundary smoke checks passed. Independent live Little Prince checks confirmed Readings artwork, publisher, English, 2016 edition and catalog attribution. GitHub main independently matches this source SHA.",
-      "notes": "Worker version UUID was not included in the pasted output; obtain it from this release folder's deploy.log or the Cloudflare deployment dashboard before using it as a rollback target. Operator post-save screenshots and independent persisted metadata read confirmed production edition acceptance (Little Prince revision 5, reviewed=true)."
+      "notes": "Operator supplied the Worker version UUID from this release folder's deploy.log on November 23. Operator post-save screenshots and independent persisted metadata read confirmed production edition acceptance (Little Prince revision 5, reviewed=true)."
     },
     {
       "versionId": "3d1d7633-3771-453c-a8d5-96e0445d994f",
