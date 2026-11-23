@@ -3,12 +3,20 @@
   "origin": "https://folio.saadalik11.workers.dev",
   "releases": [
     {
+      "versionId": null,
+      "deployedDate": "2026-11-23",
+      "sourceSnapshot": "release-cataloging-20261123-o3WaNu",
+      "sourceCommit": "d89764720a10b6e58be8ef368fb69d4823ee468f",
+      "verification": "Operator Linux build/deploy and all public/auth-boundary smoke checks passed. Independent live Little Prince checks confirmed Readings artwork, publisher, English, 2016 edition and catalog attribution. GitHub main independently matches this source SHA.",
+      "notes": "Worker version UUID was not included in the pasted output; obtain it from this release folder's deploy.log or the Cloudflare deployment dashboard before using it as a rollback target. Operator post-save screenshots and independent persisted metadata read confirmed production edition acceptance (Little Prince revision 5, reviewed=true)."
+    },
+    {
       "versionId": "3d1d7633-3771-453c-a8d5-96e0445d994f",
       "deployedDate": "2026-11-20",
       "sourceSnapshot": "release-20261120-cover-catalogs",
       "sourceCommit": null,
       "verification": "Operator deployment output and independent HTTP 200 checks for home, Odyssey, uploaded photo, admin and cart",
-      "notes": "Last confirmed deployed version; not a live account query. Later local supervision and backup commits do not change the Worker. Recheck deployments before rollback."
+      "notes": "Historical verified release, superseded by the November 23 cataloging deployment. Recheck deployments and schema compatibility before rollback."
     }
   ]
 }

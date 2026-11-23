@@ -260,6 +260,18 @@ On November 20, 2026, the Odyssey listing's incorrect Stephen Mitchell artwork w
 
 ### Production release, November 20, 2026
 
+The subsequent cataloging release was built/deployed November 23 from exact source
+`d89764720a10b6e58be8ef368fb69d4823ee468f`, Linux folder
+`release-cataloging-20261123-o3WaNu`. GitHub main was independently verified at
+that commit. Operator deployment checks passed for storefront/database/admin
+protection, Odyssey/photo/admin pages, authenticated-only edition reads (401)
+and exclusion of local candidate refresh (404). Independent live Little Prince
+checks confirmed the Readings cover, publisher, English, 2016 publication details
+and catalog attribution. The Worker UUID was not included in the pasted output;
+the release-history entry leaves it null rather than treating the older UUID as
+current. Capture it from the deployment log/dashboard and finish authenticated
+production GUI save/reload verification. The November 20 record below is history.
+
 Cloudflare Worker version `3d1d7633-3771-453c-a8d5-96e0445d994f` was deployed from the prepared `release-20261120-cover-catalogs` Linux source snapshot. The deployment checks returned HTTP 200 for the home page, Odyssey book page, uploaded photo, admin sign-in page, and cart. Independent requests also verified the matching Readings artwork, second-photo URL, edition uncertainty note, and the 134,864-byte uploaded image. These are read-only checks; no checkout, stock adjustment, or authenticated admin write was performed during deployment verification. Discord, OCR, and artwork discovery remain local services against the shared database, as designed.
 
 On November 21, production title editing was verified by the operator in Chrome, including saving a temporary title and restoring it. An independent reload confirmed the restored draft and all original editor fields, with stock still at nine copies. The in-app browser had returned “Failed to fetch” for its save attempt; Chrome completed both saves. Treat an ambiguous save response as unknown until reloading and checking the saved state, rather than resubmitting immediately. Subsequent publishing, stock, and order API verification is recorded below.
