@@ -104,8 +104,11 @@ Open **Admin → Edit → Edition details** to enter publisher, translator, lang
 and edition/printing. Leave unknown values blank. Record the physical page or
 reliable edition URL under **Sources / evidence**; check the verification box
 only after reviewing the entered details. These values save atomically with the
-existing book form. Only reviewed, nonempty values appear on the public detail
-page. A title/cover match never establishes a translator. The old unconditional
+existing book form. Reviewed, nonempty values appear on the public detail page.
+Fields that exactly match a stored catalog record for the listing's linked ISBN
+also appear, attributed to that catalog; this does not mark manual edits verified.
+Unsupported or mismatched fields stay hidden until reviewed. A title/cover match
+alone never establishes a translator. The old unconditional
 “Paperback” label has been removed because the format was not verified.
 
 Expand **Review catalog proposals** to compare stored covers and source links.
@@ -132,7 +135,9 @@ for its reported language and binding/publication year; Open Library contributes
 explicit translator credits, language and edition name, and Google Books supplies
 reported language/publication year. Descriptions about other translations are
 never translator evidence. Existing proposals need a new saved-cover search to
-retrieve these additional fields. Applying a cover is a separate checkbox.
+retrieve these additional fields. Using catalog details selects that cover by
+default; untick its separate checkbox to retain the current image. A known-ISBN
+listing rejects a catalog cover whose ISBN differs.
 For a manual work key, the catalog ISBN is also staged in the ISBN input, with
 physical confirmation still unchecked and the optional note empty. Complete that physical check or
 choose **Keep ISBN unlinked** before saving. Existing linked ISBNs are untouched.

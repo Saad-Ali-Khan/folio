@@ -73,7 +73,7 @@ export function EditionFields({ bookId, isbn, value, onChange, onExpired, disabl
         value={value.evidence} maxLength={3500} placeholder="Publisher: copyright page. Translator: title page, or a reliable edition URL."
         onChange={event => onChange({ ...value, evidence: event.target.value, reviewed: false })} /></label>
       <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1" checked={value.reviewed} onChange={event => onChange({ ...value, reviewed: event.target.checked })} />
-        <span>I checked the entered details against the evidence. Only reviewed details will appear on the public listing.</span></label>
+        <span>I checked the entered details against the evidence. Manual details need this confirmation; catalog-provided fields can appear with their source when the ISBN matches.</span></label>
       <details className="border-t border-ink/10 pt-3">
         <summary className="cursor-pointer text-sm font-medium">Review catalog proposals ({details?.candidates.length ?? 0})</summary>
         <p className="my-3 text-xs text-ink/60">Use catalog details fills the fields reported by that source and stages its ISBN for review. Missing details stay blank. Check the physical copy before verifying or linking an ISBN.</p>

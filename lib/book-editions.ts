@@ -44,6 +44,9 @@ export async function saveEdition(db: Database, bookId: number, input: EditionIn
   const chosen = input.candidateId ? previous.candidates.find(candidate => candidate.id === input.candidateId) : undefined;
   if (input.useArtwork && !chosen) throw new EditionError("Select a stored catalog candidate before applying its cover.");
   let isbn = book.isbn;
+  if (input.useArtwork && chosen?.isbn && canonicalIsbn(book.isbn) && canonicalIsbn(chosen.isbn) !== canonicalIsbn(book.isbn)) {
+    throw new EditionError("This catalog cover belongs to a different ISBN. Choose the matching edition's proposal.", 409);
+  }
   if (input.linkIsbn) {
     const normalized = canonicalIsbn(input.linkIsbn)!;
     if (!book.isbn.startsWith("manual-") && canonicalIsbn(book.isbn) !== normalized) {

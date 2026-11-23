@@ -195,8 +195,12 @@ The admin form saves book edits and edition edits in one transaction. Metadata
 revision and expected ISBN prevent stale saves, including concurrent import or
 candidate refresh. Edition-only changes create no stock movement. Candidate cover
 application is explicit. Changing a structured field clears review in the GUI;
-reviewed values require an evidence note. Public pages render only reviewed,
-nonempty metadata and no longer claim every book is a paperback. Unknown work
+reviewed values require an evidence note. Public pages render reviewed, nonempty
+metadata or exact catalog-supported fields for the linked canonical ISBN. The
+latter are explicitly attributed to the matching catalog; unsupported manual
+values stay hidden and review status is not changed. Multiple same-ISBN sources
+are ranked by agreement with saved fields. Public pages no longer claim every
+book is a paperback. Unknown work
 keys display as “Not verified” rather than masquerading as an ISBN. Evidence notes
 and candidate lists remain admin-only. Existing generated description notes are
 preserved; review those notes too when correcting previously unverified details.
@@ -237,6 +241,16 @@ ISBNs cannot be replaced in this workflow. Deletion checks metadata revision as
 well as existing book snapshots and reservation/order safeguards; metadata cascades
 only when a safe listing deletion succeeds. Backup/restore regression includes
 the new migration-managed table, function and index.
+
+November 23 GUI feedback showed saved publisher/language/edition values hidden
+behind the separate review checkbox after physical ISBN linking. ISBN-backed,
+per-field catalog attribution now avoids that redundant visibility gate without
+publishing unknown translators. Applying catalog details stages its cover by
+default, and an existing ISBN rejects a differently identified catalog cover.
+At the operator's explicit request, Little Prince listing 119's primary artwork
+was changed to Readings record 950841. Transaction checks preserved every other
+book field and the uploaded-photo checksum. Local HTML checks confirmed that
+cover, publisher, English, paperback/published 2016 and source attribution render.
 
 Cover-only OCR identifies a work and author without verifying publisher, translator, or ISBN. `lib/publisher-cover.ts` and `lib/cover-catalogs.ts` search Readings, Open Library editions, and Google Books concurrently. They require matching title and author (Open Library editions must reference the already identified work), apply recognized visible publisher/imprint clues, and compare up to six candidate covers per source with the uploaded photo using normalized grayscale and exposure-adjusted spatial color layout. Open Library examines the first 40 edition records; Google Books requests 20 search results. Three small crop variants tolerate framing differences. Conservative distance thresholds and a minimum gap between candidates reject weak or ambiguous matches. Repeated catalog ISBN evidence is grouped across sources before checking ambiguity, without assigning that ISBN to inventory. This is an artwork heuristic, not proof of edition identity.
 

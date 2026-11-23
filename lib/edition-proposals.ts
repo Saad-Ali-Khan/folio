@@ -4,7 +4,7 @@ import type { EditionCandidate, EditionInput } from "./edition-types";
 export function applyEditionProposal(value: EditionInput, candidate: EditionCandidate): EditionInput {
   return { ...value, publisher: candidate.publisher, translator: candidate.translator ?? "", language: candidate.language ?? "",
     edition: candidate.edition ?? "", evidence: `Catalog proposal from ${candidate.catalog}: ${candidate.source}`,
-    reviewed: false, candidateId: candidate.id, useArtwork: false,
+    reviewed: false, candidateId: candidate.id, useArtwork: true,
     linkIsbn: value.expectedIsbn.startsWith("manual-") ? candidate.isbn ?? "" : "",
     isbnConfirmed: false, isbnEvidence: "" };
 }

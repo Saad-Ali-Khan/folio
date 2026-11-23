@@ -3,6 +3,7 @@ import { applyEditionProposal } from "../lib/edition-proposals";
 import { enrichReadingsEdition } from "../lib/readings-edition";
 import { googleBooksCovers, openLibraryCovers, type CoverCandidate } from "../lib/cover-catalogs";
 import type { EditionInput } from "../lib/edition-types";
+import { publicEdition } from "../lib/public-edition";
 
 async function main() {
   const candidate: CoverCandidate = { title: "The Odyssey (Readings Classics)", author: "Homer", publisher: "Readings",
@@ -33,12 +34,21 @@ async function main() {
   assert.equal(staged.publisher, "Readings"); assert.equal(staged.language, "English"); assert.equal(staged.edition, full.edition);
   assert.equal(staged.translator, ""); assert.equal(staged.linkIsbn, proposal.isbn);
   assert.equal(staged.isbnConfirmed, false); assert.equal(staged.isbnEvidence, ""); assert.equal(staged.reviewed, false);
-  assert.equal(staged.expectedRevision, 4); assert.equal(staged.expectedIsbn, value.expectedIsbn); assert.equal(staged.useArtwork, false);
+  assert.equal(staged.expectedRevision, 4); assert.equal(staged.expectedIsbn, value.expectedIsbn); assert.equal(staged.useArtwork, true);
   assert.equal(value.translator, "Wrong translator", "staging is immutable and cannot write the book or stock");
   assert.equal(applyEditionProposal({ ...value, expectedIsbn: "9780141037455" }, proposal).linkIsbn, "", "an existing ISBN is not replaced");
   const legacy = applyEditionProposal(value, { ...proposal, language: undefined, edition: undefined });
   assert.equal(legacy.language, ""); assert.equal(legacy.edition, "");
   console.log("PASS catalog application fills available fields and stages ISBN without inheriting prior verification or replacing linked ISBNs");
+  const details = { publisher: "Readings", translator: "Unverified manual translator", language: "English", edition: full.edition!, reviewStatus: "unverified", candidates: [proposal] };
+  const visible = publicEdition(proposal.isbn, details);
+  assert.equal(visible.publisher, "Readings"); assert.equal(visible.language, "English"); assert.equal(visible.edition, full.edition);
+  assert.equal(visible.translator, ""); assert.equal(visible.source, proposal.source);
+  assert.equal(publicEdition(proposal.isbn, { ...details, candidates: [{ ...proposal, id: "incomplete", publisher: "Other imprint", language: "", edition: "", source: "https://openlibrary.org/books/OL1M" }, proposal] }).source, proposal.source);
+  assert.equal(publicEdition("manual-cover-work", details).publisher, "");
+  assert.equal(publicEdition("9780141037455", details).publisher, "");
+  assert.equal(publicEdition("9780141037455", { ...details, reviewStatus: "reviewed" }).translator, details.translator);
+  console.log("PASS exact ISBN-backed catalog fields display with attribution; manual, mismatched and unsupported fields stay hidden until reviewed");
 
   const meta = { title: "The Odyssey", author: "Homer", isbn: null, coverUrl: null, coverWorkId: "OL1W" };
   const [ol] = await openLibraryCovers(meta, async () => Buffer.from(JSON.stringify({ entries: [{ key: "/books/OL1M", title: "The Odyssey", covers: [1], works: [{ key: "/works/OL1W" }],

@@ -10,6 +10,7 @@ import { getDb } from "@/lib/db";
 import { readWithRetry } from "@/lib/db/read";
 import { bookEditions, bookPhotos, books } from "@/lib/db/schema";
 import { formatPrice } from "@/lib/format";
+import { publicEdition } from "@/lib/public-edition";
 
 // Book pages resolve their slug before rendering so unknown titles get a real
 // 404 status instead of a streamed soft 404.
@@ -55,9 +56,9 @@ export default async function BookPage({
   const [photo] = await readWithRetry(() => db.select({ bookId: bookPhotos.bookId })
     .from(bookPhotos).where(eq(bookPhotos.bookId, book.id)).limit(1));
   const [edition] = await readWithRetry(() => db.select({ publisher: bookEditions.publisher, translator: bookEditions.translator,
-    language: bookEditions.language, edition: bookEditions.edition, reviewStatus: bookEditions.reviewStatus })
+    language: bookEditions.language, edition: bookEditions.edition, reviewStatus: bookEditions.reviewStatus, candidates: bookEditions.candidates })
     .from(bookEditions).where(eq(bookEditions.bookId, book.id)).limit(1));
-  const reviewed = edition?.reviewStatus === "reviewed";
+  const displayEdition = publicEdition(book.isbn, edition);
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6">
@@ -135,13 +136,14 @@ export default async function BookPage({
                   : "Currently unavailable"}
               </dd>
             </div>
-            {reviewed && ([['publisher', 'Publisher'], ['translator', 'Translator'], ['language', 'Language'], ['edition', 'Edition / printing']] as const).map(([key, label]) =>
-              edition[key] ? <div key={key}><dt className="text-ink/50">{label}</dt><dd className="mt-0.5">{edition[key]}</dd></div> : null)}
+            {([['publisher', 'Publisher'], ['translator', 'Translator'], ['language', 'Language'], ['edition', 'Edition / printing']] as const).map(([key, label]) =>
+              displayEdition[key] ? <div key={key}><dt className="text-ink/50">{label}</dt><dd className="mt-0.5">{displayEdition[key]}</dd></div> : null)}
             <div>
               <dt className="text-ink/50">Shipping</dt>
               <dd className="mt-0.5">Calculated at checkout</dd>
             </div>
           </dl>
+          {displayEdition.source && <p className="mt-3 text-xs text-ink/50">Edition details from <a href={displayEdition.source} target="_blank" rel="noopener noreferrer" className="underline">{displayEdition.catalog}</a>, matched by ISBN.</p>}
         </div>
       </div>
     </div>
