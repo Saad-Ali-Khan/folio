@@ -27,6 +27,7 @@ for (const file of ["app", "components", "lib", "public", "next.config.ts", "pos
 
 for (const [source, destination] of [
   ["db.ts", "lib/db/index.ts"],
+  ["photo-store.ts", "lib/photo-store.ts"],
   ["open-next.config.ts", "open-next.config.ts"],
   ["wrangler.jsonc", "wrangler.jsonc"],
 ]) {
@@ -44,7 +45,7 @@ writeFileSync(bookPagePath, bookPage.replace(
 const temp = join(stage, ".tmp");
 mkdirSync(temp);
 const env = { ...process.env, FOLIO_CLOUDFLARE: "1", TEMP: temp, TMP: temp };
-for (const key of ["DATABASE_URL", "DATABASE_URL_UNPOOLED", "APP_URL", "NEXT_PUBLIC_APP_URL", "COD_WHATSAPP_NUMBER"]) {
+for (const key of ["DATABASE_URL", "DATABASE_URL_UNPOOLED", "APP_URL", "NEXT_PUBLIC_APP_URL", "COD_WHATSAPP_NUMBER", "R2_ACCOUNT_ID", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "PHOTO_STORAGE"]) {
   delete env[key];
 }
 const npmCli = process.env.npm_execpath;

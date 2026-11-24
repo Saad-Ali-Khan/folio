@@ -1,4 +1,4 @@
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, Client, Events, GatewayIntentBits, MessageFlags } from "discord.js";
+import { ActionRowBuilder, AttachmentBuilder, ButtonBuilder, ButtonStyle, Client, Events, GatewayIntentBits, MessageFlags } from "discord.js";
 import { fileURLToPath } from "node:url";
 import { acquireLock } from "./local-runtime";
 
@@ -10,10 +10,33 @@ try {
   process.exit(78);
 }
 
-type InventoryReply = { reply?: string | null; titleChoiceId?: string; completed?: boolean };
+type InventoryReply = { reply?: string | null; titleChoiceId?: string; completed?: boolean; cleanupAt?: string; coverMatch?: { id: string; covers: {id:string;label:string}[] } };
 
-function replyOptions(result: InventoryReply) {
+async function replyOptions(result: InventoryReply, owner: { userId: string; channelId: string }) {
   const components: ActionRowBuilder<ButtonBuilder>[] = [];
+  const files: AttachmentBuilder[] = [];
+  const embeds: {title:string;image:{url:string}}[] = [];
+  if (result.coverMatch) {
+    try {
+      if (!result.coverMatch.covers.length || result.coverMatch.covers.length > 4) throw new Error("Invalid retained cover count.");
+      for (const [index, cover] of result.coverMatch.covers.entries()) {
+        const response = await fetch(`${apiUrl}/api/discord/inventory/cover-preview?id=${encodeURIComponent(cover.id)}`, {
+          headers: { "x-inventory-secret": secret!, "x-channel-id": owner.channelId, "x-user-id": owner.userId }, signal: AbortSignal.timeout(25000), redirect: "error",
+        });
+        if (!response.ok) throw new Error("Retained cover preview unavailable.");
+        const image = Buffer.from(await response.arrayBuffer());
+        if (image.length > 512 * 1024) throw new Error("Retained cover too large.");
+        const name = `retained-cover-${index+1}.webp`;
+        files.push(new AttachmentBuilder(image, { name }));
+        embeds.push({ title: cover.label, image: { url: `attachment://${name}` } });
+      }
+      const buttons = result.coverMatch.covers.map(c => new ButtonBuilder().setCustomId(`folio-cover:${result.coverMatch!.id}:${c.id}`).setLabel(result.coverMatch!.covers.length === 1 ? `Same book · ${c.label}` : `Use ${c.label}`).setStyle(ButtonStyle.Primary));
+      buttons.push(new ButtonBuilder().setCustomId(`folio-cover:${result.coverMatch.id}:SKIP`).setLabel("Barcode only").setStyle(ButtonStyle.Secondary), new ButtonBuilder().setCustomId(`folio-cover:${result.coverMatch.id}:CANCEL`).setLabel("Cancel scan").setStyle(ButtonStyle.Secondary));
+      for (let i=0;i<buttons.length;i+=5) components.push(new ActionRowBuilder<ButtonBuilder>().addComponents(...buttons.slice(i,i+5)));
+    } catch {
+      return { content: "The retained cover preview is unavailable or expired. No stock was added. Send the barcode again to retry.", components: [], files: [], embeds: [], allowedMentions: { parse: [], repliedUser: false } };
+    }
+  }
   if (result.titleChoiceId) {
     const id = result.titleChoiceId;
     components.push(new ActionRowBuilder<ButtonBuilder>().addComponents(
@@ -22,7 +45,7 @@ function replyOptions(result: InventoryReply) {
       new ButtonBuilder().setCustomId(`folio-title:${id}:CANCEL`).setLabel("Cancel").setStyle(ButtonStyle.Secondary),
     ));
   }
-  return { content: result.reply ?? "", components, allowedMentions: { parse: [], repliedUser: false } };
+  return { content: result.reply ?? "", components, files, embeds, allowedMentions: { parse: [], repliedUser: false } };
 }
 
 const token = process.env.DISCORD_BOT_TOKEN?.trim();
@@ -103,7 +126,7 @@ client.on(Events.MessageCreate, async (message) => {
           },
           body: image,
         });
-        if (result.reply) await message.reply(replyOptions(result));
+        if (result.reply) await message.reply(await replyOptions(result, {userId:message.author.id,channelId:message.channelId}));
       }
       return;
     }
@@ -119,7 +142,7 @@ client.on(Events.MessageCreate, async (message) => {
         text,
       }),
     });
-    if (result.reply) await message.reply(replyOptions(result));
+    if (result.reply) await message.reply(await replyOptions(result, {userId:message.author.id,channelId:message.channelId}));
   } catch (error) {
     console.error("Discord inventory request failed", error);
     await message.reply({
@@ -132,10 +155,11 @@ client.on(Events.MessageCreate, async (message) => {
 client.on(Events.InteractionCreate, async interaction => {
   if (!interaction.isButton() || interaction.channelId !== channelId) return;
   const choice = /^folio-title:([0-9a-f]{10}):(ENGLISH|ORIGINAL|CANCEL)$/.exec(interaction.customId);
-  if (!choice) return;
+  const cover = /^folio-cover:([0-9a-f]{10}):([0-9a-f]{20}|SKIP|CANCEL)$/.exec(interaction.customId);
+  if (!choice && !cover) return;
   try {
     await interaction.reply({
-      content: "Saving your title choice…",
+      content: "Saving your confirmation…",
       flags: MessageFlags.Ephemeral,
       allowedMentions: { parse: [] },
     });
@@ -145,17 +169,15 @@ client.on(Events.InteractionCreate, async interaction => {
         messageId: interaction.id,
         channelId: interaction.channelId,
         userId: interaction.user.id,
-        titleChoice: { id: choice[1], selection: choice[2] },
+        ...(choice ? { titleChoice: { id: choice[1], selection: choice[2] } } : { coverChoice: { id: cover![1], selection: cover![2] } }),
       }),
     });
+    let updated = false;
     if (result.completed) {
-      await interaction.message.edit({
-        content: result.reply ?? "Title request completed.",
-        components: [],
-        allowedMentions: { parse: [] },
-      }).catch(error => console.error("Could not update the completed title prompt", error));
+      updated = await interaction.message.edit({ ...await replyOptions(result, {userId:interaction.user.id,channelId:interaction.channelId!}), attachments: [] })
+        .then(()=>true).catch(()=>false);
     }
-    await interaction.editReply({ content: result.reply ?? "Title request unavailable.", allowedMentions: { parse: [] } });
+    await interaction.editReply({ content: updated ? "Saved. See the updated message above." : result.reply ?? "Confirmation unavailable.", allowedMentions: { parse: [] } });
   } catch (error) {
     console.error("Discord title button failed", error);
     if (interaction.deferred || interaction.replied) {
@@ -180,7 +202,9 @@ async function postToInventory(
     return { reply: "Inventory request failed. Check the app logs." };
   }
 
-  return await response.json() as InventoryReply;
+  const result = await response.json() as InventoryReply;
+  if (result.cleanupAt && Number.isFinite(Date.parse(result.cleanupAt)) && process.connected) process.send?.({type:"folio-cover-cleanup",at:Date.parse(result.cleanupAt)});
+  return result;
 }
 
 client.login(token).catch((error) => {

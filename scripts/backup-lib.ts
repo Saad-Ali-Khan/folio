@@ -2,6 +2,7 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:
 import { gzipSync, gunzipSync } from 'node:zlib';
 import { sql } from 'drizzle-orm';
 import type { Database } from '../lib/db';
+import { photoIdentity } from '../lib/photo-budget';
 
 type Migration = { name: string; contents: string };
 type Row = Record<string, unknown>;
@@ -10,7 +11,36 @@ export type Snapshot = {
   migrations: Migration[];
   tables: { name: string; columns: string[]; dependencies: string[]; rows: Row[]; digest: string }[];
   sequences: { name: string; lastValue: string; isCalled: boolean }[];
+  objects?: { key: string; data: string }[];
 };
+
+export function validateBackupPhotos(snapshot: Snapshot) {
+  const objects = new Map<string, Buffer>(); let bytes = 0;
+  for (const object of snapshot.objects ?? []) {
+    const data = Buffer.from(object.data, 'base64'); bytes += data.length;
+    if (bytes > 64 * 1024 * 1024 || data.toString('base64') !== object.data || photoIdentity(data) !== object.key || objects.has(object.key)) throw Error('Invalid backup photo manifest or checksum.');
+    objects.set(object.key, data);
+  }
+  const references = [
+    ...(snapshot.tables.find(t => t.name === 'book_photos')?.rows.map(row => row.object_key) ?? []),
+    ...(snapshot.tables.find(t => t.name === 'title_choices')?.rows.map(row => (row.metadata as {uploadedCoverKey?:string})?.uploadedCoverKey) ?? []),
+  ].filter((key): key is string => typeof key === 'string' && Boolean(key));
+  if (references.some(key => !objects.has(key))) throw Error('Invalid backup: referenced R2 photo is missing.');
+  return objects;
+}
+
+export async function attachBackupPhotos(snapshot: Snapshot, get: (key: string) => Promise<Buffer>) {
+  // Pending covers expire and are never inventory photos; do not resurrect them.
+  const ready = snapshot.tables.find(t => t.name === 'photo_objects')?.rows.filter(row => row.state === 'ready' && String(row.key).startsWith('covers/')) ?? [];
+  if (ready.reduce((sum, row) => sum + Number(row.bytes), 0) > 64 * 1024 * 1024) throw Error('Backup data exceeds the 64 MiB photo archive limit; use a dedicated object backup.');
+  snapshot.objects = [];
+  for (const row of ready) {
+    const data = await get(String(row.key));
+    if (data.length !== Number(row.bytes) || photoIdentity(data) !== row.key) throw Error('Invalid backup photo checksum.');
+    snapshot.objects.push({ key: String(row.key), data: data.toString('base64') });
+  }
+  validateBackupPhotos(snapshot);
+}
 export const quote = (name: string) => '"' + name.replaceAll('"', '""') + '"';
 export function canonical(value: unknown): string {
   if (Array.isArray(value)) return '[' + value.map(canonical).join(',') + ']';
@@ -54,6 +84,7 @@ export async function takeSnapshot(db: Database, migrations: Migration[]): Promi
 }
 
 export function seal(snapshot: Snapshot, key: Buffer): Buffer {
+  validateBackupPhotos(snapshot);
   if (key.length !== 32) throw Error('Backup key must contain 32 bytes.');
   const json = Buffer.from(JSON.stringify(snapshot));
   if (json.length > 128*1024*1024) throw Error('Backup data exceeds the portable format limit; use pg_dump.');
@@ -70,16 +101,18 @@ export function open(encrypted: Buffer,key: Buffer): Snapshot {
   const snapshot=JSON.parse(gunzipSync(compressed,{maxOutputLength:128*1024*1024}).toString()) as Snapshot;
   if(snapshot.format!=='folio-data-v1'||!Array.isArray(snapshot.tables)||!Array.isArray(snapshot.migrations)||!Array.isArray(snapshot.sequences))throw Error('Unsupported backup format.');
   for(const table of snapshot.tables)if(digest(table.rows)!==table.digest)throw Error('Backup row checksum mismatch.');
+  validateBackupPhotos(snapshot);
   return snapshot;
 }
 
 export async function verifyRestore(snapshot: Snapshot) {
+  validateBackupPhotos(snapshot);
   // Deliberately accepts no connection string: this cannot overwrite production.
   const [{PGlite},{drizzle}]=await Promise.all([import('@electric-sql/pglite'),import('drizzle-orm/pglite')]);
   const isolated=new PGlite();
   try {
     const target=drizzle(isolated) as unknown as Database;
-    try { await isolated.exec(recoverySql(snapshot)); }
+    try { await isolated.exec(recoverySql(snapshot, false)); }
     catch(error) { throw new Error('Schema drift or invalid recovery SQL.',{cause:error}); }
     const names=(await isolated.query<{name:string}>(`select tablename as name from pg_tables where schemaname='public' order by tablename`)).rows.map(row=>row.name).sort();
     if(canonical(names)!==canonical(snapshot.tables.map(table=>table.name).sort()))throw Error('Schema drift: migrations do not reproduce every source table.');
@@ -90,14 +123,32 @@ export async function verifyRestore(snapshot: Snapshot) {
       if(!actual||actual.digest!==table.digest||actual.rows.length!==table.rows.length)throw Error('Restore checksum mismatch: '+table.name);
     }
     if(canonical(restored.sequences)!==canonical(snapshot.sequences))throw Error('Restored sequences do not match.');
-    return {tables:snapshot.tables.length,rows:snapshot.tables.reduce((sum,table)=>sum+table.rows.length,0),photos:snapshot.tables.find(table=>table.name==='book_photos')?.rows.length??0,sequences:snapshot.sequences.length,sourceVersion:snapshot.serverVersion,restoreVersion:restored.serverVersion};
+    // Verify the original snapshot first, then prove recovery also works without R2.
+    const hydration = photoRecoveryStatements(snapshot);
+    if (hydration.length) {
+      await isolated.exec(hydration.join('\n'));
+      const photos = snapshot.tables.find(t => t.name === 'book_photos')?.columns.includes('object_key')
+        ? (await isolated.query<{object_key:string;data:string}>('select object_key, data from book_photos where object_key is not null')).rows : [];
+      for (const photo of photos) if (photoIdentity(Buffer.from(photo.data, 'base64')) !== photo.object_key) throw Error('Restore checksum mismatch: recovered R2 photo.');
+      const choices = (await isolated.query<{metadata:{uploadedCoverKey:string;uploadedCover:string}}>("select metadata from title_choices where metadata->>'uploadedCoverKey' is not null")).rows;
+      for (const {metadata} of choices) if (photoIdentity(Buffer.from(metadata.uploadedCover, 'base64')) !== metadata.uploadedCoverKey) throw Error('Restore checksum mismatch: recovered pending photo.');
+    }
+    return {tables:snapshot.tables.length,rows:snapshot.tables.reduce((sum,table)=>sum+table.rows.length,0),photos:snapshot.tables.find(table=>table.name==='book_photos')?.rows.length??0,objects:snapshot.objects?.length??0,sequences:snapshot.sequences.length,sourceVersion:snapshot.serverVersion,restoreVersion:restored.serverVersion};
   } finally { await isolated.close(); }
 }
 
 function literal(value: string) { return "'"+value.replaceAll("'","''")+"'"; }
 
 /** Recovery script for a new empty Postgres database, never an in-place rollback. */
-export function recoverySql(snapshot: Snapshot): string {
+function photoRecoveryStatements(snapshot: Snapshot) {
+  return (snapshot.objects ?? []).flatMap(object => [
+    ...(snapshot.tables.find(t => t.name === 'book_photos')?.columns.includes('object_key') ? [`UPDATE public.book_photos SET data=${literal(object.data)} WHERE object_key=${literal(object.key)};`] : []),
+    `UPDATE public.title_choices SET metadata=jsonb_set(metadata, '{uploadedCover}', to_jsonb(${literal(object.data)}::text)) WHERE metadata->>'uploadedCoverKey'=${literal(object.key)};`,
+  ]);
+}
+
+export function recoverySql(snapshot: Snapshot, hydratePhotos = true): string {
+  validateBackupPhotos(snapshot);
   const pending=[...snapshot.tables],ordered:Snapshot['tables']=[];
   while(pending.length){
     const index=pending.findIndex(table=>table.dependencies.every(name=>name===table.name||ordered.some(done=>done.name===name)));
@@ -121,6 +172,7 @@ export function recoverySql(snapshot: Snapshot): string {
       if(!/^\d+$/.test(sequence.lastValue)||typeof sequence.isCalled!=='boolean')throw Error('Invalid backup sequence.');
       return `SELECT setval(${literal('public.'+quote(sequence.name))}::regclass,${sequence.lastValue}::bigint,${sequence.isCalled});`;
     }),
+    ...(hydratePhotos ? photoRecoveryStatements(snapshot) : []),
     'COMMIT;',
   ];
   return statements.join('\n');

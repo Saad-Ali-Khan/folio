@@ -1,4 +1,6 @@
 import {queueTitleChoice,resolveTitleChoice} from "@/lib/title-choice";
+import { resolveCoverBarcode } from "@/lib/pending-covers";
+import { notifyCoverCleanup } from "@/lib/notify-cover-cleanup";
 import { MAX_STOCK_CHOICES, queueStockChoice, resolveStockChoice } from "@/lib/discord-stock-choice";
 import { findBooksByIdentifier, getDb } from "@/lib/db";
 import { eq } from "drizzle-orm";
@@ -24,6 +26,7 @@ type DiscordCommand = {
   channelId?: string;
   text?: string;
   titleChoice?: { id?: unknown; selection?: unknown };
+  coverChoice?: { id?: unknown; selection?: unknown };
 };
 
 const ambiguousTitle = "Multiple editions match. Use the edition’s ISBN or prefix its slug with slug:.";
@@ -68,6 +71,12 @@ export async function POST(request: Request) {
   }
 
   // Button interactions carry the account ID from Discord through the signed bot request.
+  if (body?.coverChoice) {
+    const { id, selection } = body.coverChoice;
+    if (typeof id !== "string" || !/^[0-9a-f]{10}$/.test(id) || typeof selection !== "string" || typeof body.userId !== "string") return reply("Invalid cover confirmation.");
+    try { const result=await resolveCoverBarcode(await getDb(), id, channelId, body.userId, selection);await notifyCoverCleanup(result.cleanupAt);return Response.json(result); }
+    catch { const cleanupAt=new Date(Date.now()+120_000).toISOString();await notifyCoverCleanup(cleanupAt);return Response.json({ reply: "Could not confirm this cover. Check inventory before retrying; a completed import will not be added twice.", cleanupAt }); }
+  }
   if (body?.titleChoice) {
     const { id, selection } = body.titleChoice;
     if (typeof id !== "string" || !/^[0-9a-f]{10}$/.test(id) || typeof selection !== "string" || typeof body.userId !== "string") {

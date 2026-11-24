@@ -109,6 +109,37 @@ export const bookEditions = pgTable("book_editions", {
 export const bookPhotos = pgTable("book_photos", {
   bookId: integer("book_id").primaryKey().references(() => books.id, { onDelete: "cascade" }),
   data: text("data").notNull(),
+  objectKey: text("object_key"),
+});
+// Includes uncertain uploads: capacity is never automatically released on error.
+export const photoObjects = pgTable("photo_objects", {
+  key: text("key").primaryKey(),
+  bytes: integer("bytes").notNull(),
+  state: text("state").notNull().default("reserved"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+export const photoUploadMonths = pgTable("photo_upload_months", {
+  month: text("month").primaryKey(),
+  attempts: integer("attempts").notNull().default(0),
+  reads: integer("reads").notNull().default(0),
+});
+export const pendingCovers = pgTable("pending_covers", {
+  id: text("id").primaryKey(), sourceMessageId: text("source_message_id").notNull().unique(),
+  userId: text("user_id").notNull(), channelId: text("channel_id").notNull(),
+  objectKey: text("object_key").notNull(), qty: integer("qty").notNull(),
+  state: text("state").notNull().default("uploading"), claimId: text("claim_id"),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  cleanedAt: timestamp("cleaned_at", { withTimezone: true }),
+});
+export const coverBarcodeChoices = pgTable("cover_barcode_choices", {
+  id: text("id").primaryKey(), sourceMessageId: text("source_message_id").notNull().unique(),
+  userId: text("user_id").notNull(), channelId: text("channel_id").notNull(),
+  metadata: jsonb("metadata").$type<import("../import-metadata").ImportMetadata>().notNull(),
+  coverIds: jsonb("cover_ids").$type<string[]>().notNull(),
+  qty: integer("qty").notNull(), explicitQty: integer("explicit_qty").notNull().default(0),
+  state: text("state").notNull().default("pending"),
+  result: jsonb("result").$type<import("../pending-covers").CoverReply>(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
 });
 export type Order = typeof orders.$inferSelect;
 

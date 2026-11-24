@@ -2,7 +2,8 @@ import { randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { createDatabase } from '../lib/db';
-import { open, recoverySql, seal, takeSnapshot, verifyRestore } from './backup-lib';
+import { attachBackupPhotos, open, recoverySql, seal, takeSnapshot, verifyRestore } from './backup-lib';
+import { readObjectPhoto } from '../lib/book-photos';
 
 function recoveryKey(create: boolean) {
   let encoded=process.env.FOLIO_BACKUP_KEY?.trim();
@@ -29,7 +30,10 @@ async function main(){
     const migrations=readdirSync('drizzle').filter(name=>name.endsWith('.sql')).sort().map(name=>({name,contents:readFileSync(path.join('drizzle',name),'utf8')}));
     const {db,close}=await createDatabase();
     let snapshot;
-    try{snapshot=await takeSnapshot(db,migrations);}finally{await close();}
+    try{
+      snapshot=await takeSnapshot(db,migrations);
+      await attachBackupPhotos(snapshot, key => readObjectPhoto(db, key));
+    }finally{await close();}
     const directory=path.resolve('.folio-backups');mkdirSync(directory,{recursive:true});
     destination=path.join(directory,`folio-${new Date().toISOString().replaceAll(':','-')}-${randomBytes(3).toString('hex')}.foliobackup`);
     const temporary=destination+'.tmp';
@@ -51,8 +55,8 @@ async function main(){
   }
   const report=await verifyRestore(snapshot);
   writeFileSync(destination+'.verified.json',JSON.stringify({verifiedAt:new Date().toISOString(),isolation:'in-memory PGlite; no production restore',...report},null,2)+'\n',{mode:0o600});
-  console.log(`PASS isolated restore: ${report.tables} tables, ${report.rows} rows, ${report.photos} photos, ${report.sequences} sequences; every table checksum matched.`);
-  console.log('Production was read only. Backup excludes database roles, account settings, and runtime secrets.');
+  console.log(`PASS isolated restore: ${report.tables} tables, ${report.rows} rows, ${report.photos} photos, ${report.objects} archived R2 objects, ${report.sequences} sequences; every table checksum matched; photo fallback recovery verified.`);
+  console.log('Business data was read only. R2 reads update the usage budget. Backup excludes database roles, account settings, and runtime secrets.');
 }
 main().catch(error=>{
   const message=error instanceof Error?error.message.split('\n')[0]:'';

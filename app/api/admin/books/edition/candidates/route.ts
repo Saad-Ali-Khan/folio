@@ -5,6 +5,7 @@ import { requestIsAdmin, sameOrigin } from "@/lib/admin-auth";
 import { EditionError, getEdition, storeEditionCandidates } from "@/lib/book-editions";
 import { lookupPublisherCover } from "@/lib/publisher-cover";
 import { consumeRequestLimit } from "@/lib/request-limits";
+import { readBookPhoto } from "@/lib/book-photos";
 
 export async function POST(request: Request) {
   if (!sameOrigin(request)) return Response.json({ error: "Invalid request origin." }, { status: 403 });
@@ -22,7 +23,7 @@ export async function POST(request: Request) {
     const [photo] = await db.select().from(bookPhotos).where(eq(bookPhotos.bookId, book.id));
     if (!photo) throw new EditionError("Upload a full-cover photo through Discord before searching by cover.");
     if (!await consumeRequestLimit(db, `edition-candidates:${book.id}`, 3, 60)) throw new EditionError("Please wait a minute before searching this cover again.", 429);
-    const result = await lookupPublisherCover(Buffer.from(photo.data, "base64"), { title: book.title, author: book.author, isbn: null, coverUrl: null,
+    const result = await lookupPublisherCover(await readBookPhoto(db, photo), { title: book.title, author: book.author, isbn: null, coverUrl: null,
       coverWorkId: book.isbn.match(/^manual-cover-(ol\d+w)$/i)?.[1].toUpperCase() }, []);
     const edition = await db.transaction(async tx => {
       const [current] = await tx.select().from(books).where(eq(books.id, book.id)).for("update");

@@ -13,6 +13,7 @@
     "binding": "ASSETS"
   },
   "workers_dev": true,
+  "r2_buckets": [{ "binding": "PHOTO_BUCKET", "bucket_name": "folio-photos" }],
   "vars": {
     "APP_URL": "https://folio.saadalik11.workers.dev",
     "TRUSTED_CLIENT_IP_HEADER": "CF-Connecting-IP"

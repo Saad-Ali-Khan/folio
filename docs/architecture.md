@@ -37,7 +37,7 @@ identity used by streamed book controls.
 
 - **Stack.** Next.js 16 App Router, React 19, TypeScript, and Tailwind CSS. The [root layout](../app/layout.tsx) provides the shared header, footer, typography, and cart provider.
 - **Storefront.** `/` renders the searchable [catalog](../components/catalog.tsx). `/books/[slug]` reads the current listing from Neon and returns 404 for an unknown or hidden book. The Worker renders these pages on request.
-- **Uploaded covers.** Identified front-cover imports save a resized, auto-oriented WebP in `book_photos` as the listing's second image. The catalog cover stays first. One photo per listing limits storage, and the latest successful cover import replaces that slot. The photo is stored atomically with the inventory import and survives deferred title selection and duplicate Discord deliveries. PostgreSQL storage makes the photo available to Cloudflare while OCR runs locally, without depending on expiring Discord attachment URLs or adding a storage service. The image endpoint serves published, priced listings only. Apply migration `0011_book_photos.sql` before deploying the page or restarting the updated local importer.
+- **Uploaded covers.** Identified front-cover imports save a resized, auto-oriented WebP as the listing's second image; catalog artwork stays first. One photo per listing is referenced atomically with the stock import, including deferred title choices and duplicate deliveries. The original implementation stores base64 in `book_photos`. The November 23 R2 release adds private object references, guarded local uploads, native Worker reads and verified database fallback. Existing originals are preserved. Enable local `PHOTO_STORAGE=r2` only after the new Worker passes deployment checks. The photo endpoint still serves published, priced listings only. See the R2 cutover section for release status and migrations 0014–0015.
 - **Cover recognition.** The focused OCR fallback adds single-line reads with horizontal expansion for prominent, condensed lettering and retains individually confident words when surrounding artwork lowers the line score. It combines the initial and focused text so a successful author read is retained. Cover matching can verify an author against alternate names from that same Open Library author record, allowing an English name such as Homer to match the catalog's Greek name. Wrapped title phrases use their largest text height. Duplicate-work comparisons tolerate a leading article while retaining the existing edition-count dominance check. These changes recovered The Odyssey from the November 20 upload.
 - **Discord availability.** The local inventory server and the Discord bot must both run for uploads and title buttons to receive replies. The bot sends a typing indicator while processing photos and replies when the inventory connection fails. After an ambiguous timeout, the operator checks stock before submitting a new message because Discord gives each resend a new identifier.
 - **Title-button status.** The bot immediately replies with an explicit saving status. Once the API returns a completed title choice, it replaces the original prompt with the result and removes its buttons, then updates the private reply. Updating the public result independently lets the saved outcome remain visible if the private interaction response fails. Discord REST calls use a 10-second timeout and one retry.
@@ -68,9 +68,15 @@ loads parent tables before dependent rows with user audit triggers temporarily
 disabled, reenables the triggers, and restores sequence values without reusing
 numbers consumed by deleted test records. It refuses a nonempty public schema.
 
-Verification executes that exact SQL against a fresh in-memory PGlite database;
-it never accepts a production restore target. Full row checksums, columns,
-photos, and sequence values are checked before emitting a verification report.
+Verification reconstructs the original snapshot in fresh in-memory PGlite, checks
+full row checksums, columns and sequence values, then tests the photo hydration
+statements included in recovery SQL. It never accepts a production restore target.
+Referenced and ready R2 objects are archived as encrypted image bytes with their
+content-addressed keys, not just URLs. Recovery SQL materializes those bytes into
+listing rows and title-choice metadata so recovery does not depend on R2 access.
+Backups download objects after the consistent database snapshot; immutable keys
+and checksums bind them to that snapshot. R2 usage-budget accounting writes occur
+outside the snapshot; business data is read only.
 AES-256-GCM authenticates the archive; bad keys and modified ciphertext fail
 before any SQL is executed. The key and archives are excluded from Git. SQL
 export requires `--allow-plaintext` because the resulting recovery file contains
@@ -80,7 +86,10 @@ This provides a recovery path while native PostgreSQL clients are unavailable
 on the operator's PC. It covers Folio's migration-managed public schema, not
 roles, account configuration, arbitrary extensions, non-public schemas, or
 Cloudflare runtime secrets. The exporter refuses source application relations
-over 64 MiB; native unpooled `pg_dump` is the documented path for larger or
+over 64 MiB and external photo payloads over 64 MiB; total portable archive JSON
+is limited to 128 MiB. Use a dedicated object backup before reaching that photo
+limit; `pg_dump` alone does not preserve R2 object bytes. Native unpooled `pg_dump`
+is the documented path for larger or
 independently managed databases. A fresh-target recovery and a verified cutover
 are the rollback procedure; the tool does not overwrite production or reverse
 individual migrations. Account-specific Neon retention, off-device copies, and
@@ -116,7 +125,222 @@ other paused backlog work. Off-device storage remains deferred.
 
 ## Keeping this knowledge base current
 
-### Production monitoring boundary
+### R2 billing controls
+
+The operator activated R2 and configured account-wide $1 warning and $5 urgent
+budget email alerts on November 23, alongside Cloudflare's auto-created $10 alert.
+The screenshot shows one recipient each and zero spend, but labels the period
+Dec 2026; billing-period coverage and email delivery remain unverified. These
+alerts do not stop R2 usage or cap its bill, and are separate from free-tier
+resource thresholds. The copy and reference preparation status is recorded below.
+
+### R2 photo copy stage (November 23)
+
+The destination is the private Standard-class bucket `folio-photos`. The operator
+created it and configured bucket-scoped credentials in ignored local settings.
+An encrypted pre-migration backup created at 12:15 UTC on November 23 passed its
+isolated restore check: 16 tables, 113 rows, two photos and seven sequences.
+Migration 0014 was then applied to the shared database. Both listing photos
+(two unique objects, 184,618 bytes total) were copied and downloaded for SHA-256
+verification. A separate `--verify` run passed for both reserved objects.
+Before/after record counts and checksums confirmed the original books, orders,
+order lines, returns, uploaded photos and stock history unchanged. No Neon
+photo bytes were deleted; Worker serving and inventory imports still use Neon.
+
+`npm run photos:migrate -- --plan` reads the saved listing photos without writing.
+The November 23 plan found two unique photos totaling 184,618 decoded bytes.
+With bucket-scoped Object Read & Write credentials in local environment variables
+and migration 0014 applied, `--copy` reserves capacity, copies sequentially, and verifies each downloaded copy
+by SHA-256. It never removes or changes the original `book_photos` rows.
+`--verify` checks all reserved objects, including uncertain prior uploads.
+The existing storefront URL and authenticated local import continue using Neon.
+The R2-enabled Worker release and local import activation status are recorded below.
+Neon original reclamation and historical title-choice cleanup remain pending until
+production serving and a new upload are verified.
+
+The fixed copy policy is 512 KiB per optimized WebP, 8,000,000,000 total tracked
+bytes, and 10,000 PUT attempts per UTC calendar month. A transaction-scoped global
+advisory lock reserves bytes and one attempt before external work. Content-addressed
+keys deduplicate identical permanent images. Reservations survive failure/crashes;
+permanent reservations are not released automatically. Temporary reservations
+are released only after confirmed cleanup deletion. Repeat copies refuse unresolved objects until a
+checksum verification succeeds. Requests use one PUT with no automatic retries,
+a create-only condition, private signed S3 access, bounded reads and deadlines.
+Ready objects are skipped by `--copy`; run `--verify` before any future cutover.
+
+These are application controls for this tool, database ledger and single bucket,
+not an account spending stop. Direct dashboard/API uploads, other applications,
+other buckets and object retention outside this ledger remain outside the
+limit. Keep the ledger and credentials tied to the same bucket/account; never
+reset the ledger or switch destinations to bypass an unresolved upload. The
+8 GB ceiling intentionally leaves headroom, but free-tier eligibility and billing
+periods still require account review. No continuous quota polling was added.
+
+### R2 cutover (November 23; production deployed)
+
+Migration 0015 adds nullable `book_photos.object_key` and a monthly read counter.
+The pre-migration encrypted backup restored successfully with 18 tables and both
+checksum-matched object originals. Both existing photos were then freshly verified
+and linked to their R2 keys without deleting their database bytes. Before/after
+checksums confirmed original books, orders, lines, returns, stock history and
+inline photo bytes unchanged. Direct local R2 reads matched both originals.
+The subsequent `folio-2026-11-23T13-14-38.247Z-625e07.foliobackup` passed restore:
+18 tables, 118 rows, two photos, two archived R2 objects and seven sequences.
+
+The Cloudflare build replaces `lib/photo-store.ts` with the native binding adapter
+and binds `PHOTO_BUCKET` to private `folio-photos`. S3 keys stay local; the Worker
+does not need them. The same published/priced database gate precedes object access,
+and both transports verify the object content hash. The existing URL and no-store
+policy remain. Missing/corrupt/unavailable R2 reads use a preserved inline original;
+without one they return 503, rather than exposing another image. The diagnostic
+`X-Folio-Photo-Storage` header reports the actual source, allowing deployment checks
+to reject a silent fallback. Draft requests cannot consume an R2 read.
+
+All controlled R2 downloads reserve a read attempt atomically before access, capped
+at 1,000,000 per UTC calendar month, including migration verification and backups.
+Failed reads remain counted; there are no object-read retries. The limits cover
+Folio paths, not direct Cloudflare/S3 use or another application. Accounting adds
+a database write to R2 reads; ordinary storefront traffic already queries Neon,
+and no background poller was added. Budget exhaustion can return 503 for R2-only
+images; preserved originals continue to work.
+
+With local `PHOTO_STORAGE=r2`, front-cover processing uploads and verifies the
+object before queueing a title choice or adding stock. The metadata and listing
+store only a key for new uploads, avoiding duplicate base64 payloads. The existing
+claim/stock transaction validates the ready key, including deferred confirmation;
+storage failure adds no stock. The flag was enabled after independent production
+R2 checks passed, and supervised local services were restarted. Existing pending
+base64 choices still resolve. A new front-cover Discord import is still required
+to complete live acceptance.
+
+The detached restart did not survive in the agent execution environment; a
+persistent foreground supervisor session restored the configured/OCR-ready local
+API and the connected, ready Discord bot. Windows-logon startup acceptance remains
+separately tracked; the production Worker does not depend on this local process.
+
+Rollback to pre-R2 code requires stopping new R2 imports (unset PHOTO_STORAGE),
+then `npm run photos:migrate -- --rollback` before deploying the old Worker/local
+code. This downloads and verifies R2-only listing and title-choice bytes, uses
+compare-and-set writes to materialize legacy fallbacks, and never changes stock.
+Keep the additive schema. It is idempotent; stop on any error. If R2 is unavailable,
+recover the encrypted backup into a new database, verify it and perform a controlled
+database cutover instead. Isolated tests cover both rollback paths. No old-code
+rollback has been performed. Verified inline-payload reclamation is recorded below.
+
+`scripts/prepare-photo-release.mjs` builds a credential-free source snapshot with
+file checksums and known public photo hashes. The prepared Linux launcher builds
+and deploys it, runs existing production smoke checks, then requires actual R2
+responses and matching checksums for both published photos. Windows still rejects
+WSL launch from the agent with Wsl/E_ACCESSDENIED, so the operator must execute the
+prepared launcher in their session. The operator deployed snapshot
+`release-r2-20261123-V4MpuM` as version `c1ffb35f-4b6d-4071-abfd-7616e9ee12c6`.
+Release smoke checks and independent actual-R2/header/checksum checks passed for
+both existing photos. The subsequent recovery, local fallback workflow, and
+database reclamation are recorded below. The release is a checksummed
+working-tree snapshot based on 15477538594cf29f430e3d8202931eb55f094bf1, not a claim
+that the R2 implementation has already been committed or pushed.
+
+The first new-photo acceptance attempt on November 23 exposed a recognition
+limitation: The Complete Stories cover uses a cursive title and rotated F. Kafka
+credit, neither recovered by the initial/focused OCR passes. A subsequent barcode
+scan identified ISBN 9780805210552 and created draft 125 with one copy. The original
+failed cover was then recovered for that operator-confirmed same book, optimized,
+uploaded through guarded R2 storage and linked without changing stock or any book
+fields; downloaded bytes matched. The public prompt and private title-button
+acknowledgment repeat the success text, but the database contains one import and
+one +1 movement. This manual recovery verifies actual new-photo storage, not a
+successful automatic front-cover recognition test. Typography recognition and
+safe association of a failed cover with a subsequent barcode remain backlog work.
+The follow-up archive `folio-2026-11-23T14-09-17.223Z-273962.foliobackup`
+passed isolated restore with 18 tables, 124 rows, three listing photos, three
+archived R2 objects and seven sequences, including the recovered Kafka cover.
+
+### Failed-cover and barcode confirmation (local workflow)
+
+Migration 0016 adds `pending_covers` and `cover_barcode_choices`. When cover
+identification still fails, the authenticated importer saves an optimized private
+WebP under `pending/<random-id>/<content-hash>.webp` for 15 minutes. It binds the
+record to source message, Discord user and channel, and retains the requested
+quantity. A duplicate delivery reuses the record; no stock is added. Retention is
+capped at four active covers per user/channel and 32 globally, in addition to R2
+byte, PUT and read budgets. If storage is unavailable the bot says it could not
+retain the image; it does not falsely claim success.
+R2 PUTs explicitly set Content-Length: Next.js can otherwise stream the signed
+request without a length and R2 rejects it with HTTP 411. The real local HTTP
+check exposed this difference from direct CLI uploads; transport tests now assert
+the exact length header.
+
+An ADD barcode scan by that same user/channel now pauses when retained covers
+exist. The bot fetches previews from a secret-authenticated local endpoint, shows
+up to four labeled image attachments and asks which is the same physical book.
+Nothing is auto-associated. Wrong account/channel, unoffered IDs, expired covers,
+and already-used covers are rejected. Preview failure hides confirmation buttons.
+Barcode-only and cancellation options remain explicit. The original retained
+quantity applies unless the barcode caption explicitly supplies a quantity.
+
+Confirmation locks the barcode request and claims the selected cover with a short
+processing lease. It verifies/downloads the temporary image and promotes it to a
+separate permanent `covers/` object before atomically importing stock or queueing
+the English/original title choice. The stock claim uses the barcode message ID,
+so repeats and concurrent clicks cannot receive it twice. Title selection, if
+needed, still precedes stock receipt. Failed promotion leaves stock unchanged;
+retries cannot extend a processing lease indefinitely. Once used, the temporary
+object expires immediately; permanent objects are never eligible for this cleanup.
+
+The local supervisor scans cleanup deadlines once at startup and sleeps until
+known expiry. The API notifies its authenticated loopback control endpoint before
+replying, with bot IPC as another notification path. Thus a lost Discord response
+does not normally lose the cleanup deadline. No periodic empty-table polling was
+added. Confirmed DELETE precedes ledger-capacity release; errors retain the
+reservation and schedule a ten-minute retry. If the PC is asleep/off, access
+expires on time but physical deletion waits for resume/startup. This is a local
+service responsibility, not a Cloudflare cron or a new cloud subscription.
+
+Temporary images are intentionally excluded from encrypted backups; immutable
+permanent listing/title-choice images remain included. Recovery does not resurrect
+expired image bytes. Minimal request tombstones remain for duplicate protection.
+The Worker excludes Discord routes, so these changes do not require another
+Cloudflare deployment. Completed title/cover actions now acknowledge privately
+with a short reference to the updated public prompt rather than duplicating the
+full stock-success message. Isolated tests cover ownership, preview protection,
+expiry, quantities, selection, replay/concurrent confirmation, failed promotion,
+cleanup, scheduler wakeups and permanent-photo backup recovery.
+
+### Reclaiming legacy photo payloads
+
+`photos:migrate --prepare-reclaim` prepares permanent copies for legacy listing
+photos and terminal/expired title-choice payloads without deleting anything.
+Create a fresh encrypted backup after this step. `--reclaim BACKUP_FILE` opens
+and restore-verifies the archive, requires matching archived rows and image bytes,
+downloads and verifies live R2 bytes, then clears only those inline payloads in
+one compare-and-set transaction. Title metadata keeps a permanent object key;
+active pending choices are untouched. No book, quantity, order or stock-audit
+update is performed. Replays are harmless. The archive and the rollback helper
+can still materialize legacy bytes if needed. Actual cleanup results are recorded
+in the backlog; this mechanism must not be replaced with a blanket SQL deletion.
+
+On November 23 the old payloads were prepared, then encrypted archive
+`folio-2026-11-23T15-31-41.412Z-39e9b1.foliobackup` passed restore verification.
+The guarded command cleared two listing payloads and two terminal title-choice
+payloads (492,320 logical text bytes) atomically. Physical database storage may
+reclaim dead tuples later; this is not a claim of an immediate billing reduction.
+All three listing photos now have no inline data and use permanent R2 references.
+Independent checks verified all three published image URLs served matching R2
+bytes and books, quantities, orders, lines, returns and stock/import audits matched
+the pre-cleanup archive. The cleaned-state archive
+`folio-2026-11-23T15-34-39.293Z-cddc49.foliobackup` also passed: 20 tables,
+127 rows, three photos/archived R2 objects and seven sequences.
+
+The actual local HTTP workflow was exercised with the previously unrecognized
+Kafka cover: retain privately, scan its barcode, fetch the correct authenticated
+preview and cancel. No stock import occurred. Temporary object and test records
+were removed. Early attempts exposed missing Content-Length (fixed) and transient
+database-read failures; cleanup was verified separately. Operator catalog edits
+made during those checks were preserved. The local API and bot report ready;
+next-book preview/button acceptance in Discord remains the final operator UI check.
+R2 deletion does not delete original Discord uploads or purge Discord CDN caches.
+
+### Production monitoring checks
 
 The dependency-free `scripts/monitor-production.mjs` checks the existing public
 storefront, database-backed availability endpoint, and unauthenticated admin

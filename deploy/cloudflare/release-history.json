@@ -3,6 +3,16 @@
   "origin": "https://folio.saadalik11.workers.dev",
   "releases": [
     {
+      "versionId": "c1ffb35f-4b6d-4071-abfd-7616e9ee12c6",
+      "deployedDate": "2026-11-23",
+      "sourceSnapshot": "release-r2-20261123-V4MpuM",
+      "sourceCommit": null,
+      "sourceBaseCommit": "15477538594cf29f430e3d8202931eb55f094bf1",
+      "sourceArchiveSha256": "de9126e8223e4341e43172e54521f9b3ab86fb862871401720daf083d9052131",
+      "verification": "Operator Linux build/deploy and production smoke checks passed. Independent requests verified R2 source headers and original checksums for both published photos.",
+      "notes": "Checksummed working-tree release includes uncommitted R2 implementation. Native PHOTO_BUCKET binding; originals retained. Local import flag enabled after verification; new Discord photo acceptance and database payload reclamation pending."
+    },
+    {
       "versionId": "3265780b-d44b-417d-8a85-c3e32a276c1a",
       "deployedDate": "2026-11-23",
       "sourceSnapshot": "release-cataloging-20261123-o3WaNu",

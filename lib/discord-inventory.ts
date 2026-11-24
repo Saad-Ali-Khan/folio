@@ -2,6 +2,7 @@ import {lookupImportMetadata} from "./import-metadata";
 import { storeEditionCandidates } from "./book-editions";
 import type { EditionCandidate } from "./edition-types";
 import { canonicalIsbn } from "./isbn";
+import { readyPhotoKey } from "./book-photos";
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import { and, eq, gte, sql } from "drizzle-orm";
 import type { Database } from "@/lib/db";
@@ -77,6 +78,7 @@ export type BookMetadata = {
   coverUrl: string | null;
   coverWorkId?: string;
   uploadedCover?: string;
+  uploadedCoverKey?: string;
   description?: string;
 };
 
@@ -94,6 +96,7 @@ export async function createBook(
   meta: BookMetadata,
   stock: number,
 ): Promise<{ title: string; slug: string; stock: number }> {
+  const photoKey = meta.uploadedCoverKey ? await readyPhotoKey(db, meta.uploadedCoverKey) : null;
   const taken = new Set(
     (await db.select({ slug: books.slug }).from(books)).map((row) => row.slug),
   );
@@ -115,8 +118,8 @@ export async function createBook(
     })
     .returning({ id: books.id, title: books.title, slug: books.slug, stock: books.stock });
 
-  if (meta.uploadedCover) {
-    await db.insert(bookPhotos).values({ bookId: created.id, data: meta.uploadedCover });
+  if (meta.uploadedCover || meta.uploadedCoverKey) {
+    await db.insert(bookPhotos).values({ bookId: created.id, data: meta.uploadedCover ?? "", objectKey: photoKey });
   }
 
   if (meta.editionCandidates?.length) await storeEditionCandidates(db, created.id, meta.editionCandidates);
@@ -166,9 +169,11 @@ export async function importDiscordBook(db: Database, messageId: string, channel
      .where(and(eq(books.id, existing.id), meta.coverWorkId ? eq(books.status, "draft") : undefined))
      .returning();
    if (!updated) throw new Error("The inventory entry changed. Send the photo again or scan the ISBN barcode.");
-   if (meta.uploadedCover) {
-    await tx.insert(bookPhotos).values({ bookId: updated.id, data: meta.uploadedCover })
-     .onConflictDoUpdate({ target: bookPhotos.bookId, set: { data: meta.uploadedCover } });
+   if (meta.uploadedCover || meta.uploadedCoverKey) {
+    const objectKey = meta.uploadedCoverKey ? await readyPhotoKey(tx as unknown as Database, meta.uploadedCoverKey) : null;
+    const photo = { data: meta.uploadedCover ?? "", objectKey };
+    await tx.insert(bookPhotos).values({ bookId: updated.id, ...photo })
+     .onConflictDoUpdate({ target: bookPhotos.bookId, set: photo });
    }
    if (meta.editionCandidates?.length) await storeEditionCandidates(tx as unknown as Database, updated.id, meta.editionCandidates);
    return updated;

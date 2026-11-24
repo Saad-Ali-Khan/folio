@@ -1,5 +1,51 @@
 # Folio
 
+## Private R2 photo storage
+
+The R2-enabled release binds `PHOTO_BUCKET` to private Standard bucket
+`folio-photos`. Only the local importer and backup tool need bucket-scoped S3
+credentials in ignored `.env.local`; never copy those credentials into release
+archives. Apply migrations 0014–0015 before deploying this release. Keep local
+`PHOTO_STORAGE` unset until production photo checks pass, then set it to `r2`
+and restart the local inventory API. New cover/title-choice records then hold
+an object reference instead of base64. Originals are preserved during cutover,
+then reclaimed only through the verified-backup cleanup command.
+
+`npm run photos:migrate -- --plan` is read only. `--copy` copies and verifies;
+`--verify` rechecks reserved objects; `--link` verifies and links existing photos
+without removing their database bytes. Limits are 512 KiB/photo, 8 GB tracked
+capacity, 10,000 PUT attempts and 1,000,000 read attempts/month. These control
+Folio's paths, not account-wide Cloudflare spending. Failed attempts stay counted.
+Do not reset the ledger or switch its bucket/account. Unresolved uploads require
+verification before another attempt; no automatic object retry is performed.
+
+`npm run backup:create` now includes ready R2 image bytes and verifies offline
+photo recovery. Keep archive/key copies off-device separately. The portable tool
+stops at 64 MiB of external photos; plan a dedicated object backup before that
+limit. A database-only dump does not contain R2 images.
+
+Before rolling back to pre-R2 code, disable new R2 imports, run
+`npm run photos:migrate -- --rollback`, and require success. This restores verified
+legacy image bytes for listings and title choices without stock changes. If R2
+is unavailable, use a verified encrypted backup and a new-database recovery.
+Do not delete Neon fallbacks until deployed R2 serving, a new import and current
+backup/rollback checks have passed. See [design documentation](docs/architecture.md).
+
+## Retained covers and photo cleanup
+
+Failed cover recognition now retains the image privately for 15 minutes. Send its
+barcode next from the same Discord account and channel; select the matching image
+in the preview prompt before stock is received. Up to four covers can wait per
+account/channel. Use Barcode only if none match, or Cancel scan to add nothing.
+Any English/original title choice follows that confirmation. Cleanup runs through
+the local supervisor; keep it running. After sleep/shutdown, physical deletion
+resumes at startup, while expired images cannot be selected or previewed.
+
+To reclaim old base64 copies: run `npm run photos:migrate -- --prepare-reclaim`,
+create a fresh verified backup, then run `npm run photos:migrate -- --reclaim "PATH_TO_BACKUP"`.
+Cleanup requires matching archive/live
+bytes and leaves active title choices and inventory quantities unchanged.
+
 ## Production monitoring and incident response
 
 `npm run monitor:production` performs three unauthenticated, read-only checks:

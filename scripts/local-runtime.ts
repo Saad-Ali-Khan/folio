@@ -64,6 +64,7 @@ export function logStream(stream: NodeJS.ReadableStream, log: (line: string) => 
 }
 
 export class LocalService {
+  onMessage?: (message: unknown) => void;
   child?: ChildProcess;
   restarts = 0;
   failures = 0;
@@ -88,6 +89,7 @@ export class LocalService {
     logStream(child.stdout!, this.log);
     logStream(child.stderr!, this.log);
     child.on("message", message => {
+      this.onMessage?.(message);
       if (message && typeof message === "object" && "type" in message && message.type === "folio-bot-health") {
         this.lastMessageAt = Date.now();
         this.ready = "ready" in message && message.ready === true;
