@@ -3,6 +3,23 @@
   "origin": "https://folio.saadalik11.workers.dev",
   "releases": [
     {
+      "versionId": "ff63a5b6-3dd6-4128-bc52-930bf581c50d",
+      "deployedDate": "2026-11-25",
+      "sourceSnapshot": "release-cash-admin-20261125",
+      "sourceCommit": null,
+      "sourceArchiveSha256": "1fe4beb2d12e55ef81fa70bcee9913fdde68343ca7d0b654e4c6a27ccc6ff699",
+      "verification": "Operator deployment and storefront/database/admin-auth checks passed. Initial photo verification hit TCP connection timeouts. Independent read-only retries passed both R2 photo hashes and deployed cash collection/payout controls.",
+      "notes": "Checksummed working-tree release; no database migration or real cash/order/stock writes. Operator GUI review remains separate."
+    },
+    {
+      "versionId": "658f5e01-ca21-4bbd-b91c-d95965e981bc",
+      "deployedDate": "2026-11-25",
+      "sourceSnapshot": "release-shared-isbn-20261125",
+      "sourceCommit": null,
+      "verification": "Operator deployment output confirms rendering/database/auth checks, unchanged R2 photo hashes and shared-ISBN admin assets.",
+      "notes": "Migration 0017 applied separately; local save verified independent shared-ISBN listings and unchanged stock."
+    },
+    {
       "versionId": "c1ffb35f-4b6d-4071-abfd-7616e9ee12c6",
       "deployedDate": "2026-11-23",
       "sourceSnapshot": "release-r2-20261123-V4MpuM",

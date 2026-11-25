@@ -1,5 +1,6 @@
 import { requestIsAdmin, sameOrigin } from "@/lib/admin-auth";
-import { cancelCodOrder, listCodFulfillmentOrders, recordCodEvent } from "@/lib/cod-order";
+import { cancelCodOrder, listCodFulfillmentOrders, recordCodEvent, type CodCashSnapshot } from "@/lib/cod-order";
+import {parseCodCash} from "@/lib/cod-cash";
 import { getDb } from "@/lib/db";
 import { advanceFulfillment, CheckoutError, returnItem } from "@/lib/order-service";
 
@@ -8,6 +9,10 @@ const maxInteger = 2_147_483_647;
 
 function positiveInteger(value: unknown): value is number {
   return typeof value === "number" && Number.isInteger(value) && value > 0 && value <= maxInteger;
+}
+
+function cashTimestamp(value:unknown):value is string|null {
+  return value===null || typeof value==="string" && Number.isFinite(Date.parse(value)) && new Date(value).toISOString()===value;
 }
 
 export async function GET(request: Request) {
@@ -32,7 +37,7 @@ export async function POST(request: Request) {
   const { id, action, fulfillmentStatus, subtotalCents } = input ?? {};
   const tracking = typeof input?.tracking === "string" ? input.tracking.trim() : "";
   if (!positiveInteger(id) ||
-      !["packed", "shipped", "delivered", "cancelled", "refused", "returned", "restock"].includes(action) ||
+      !["packed", "shipped", "delivered", "cancelled", "refused", "returned", "restock", "collected", "remitted"].includes(action) ||
       !["unfulfilled", "packed", "shipped", "returning", "returned", "delivered"].includes(fulfillmentStatus) ||
       !Number.isInteger(subtotalCents) || subtotalCents < 0 || subtotalCents > maxInteger) {
     return Response.json({ error: "Refresh the order and choose a valid action." }, { status: 400 });
@@ -44,6 +49,16 @@ export async function POST(request: Request) {
   try {
     const db = await getDb();
     const expected = { fulfillmentStatus, subtotalCents };
+    if(action==="collected" || action==="remitted") {
+      const amount=parseCodCash(input.amount),reference=typeof input.reference==="string"?input.reference.trim():"";
+      if(amount===null || !Number.isInteger(input.totalCents) || input.totalCents<0 || input.totalCents>maxInteger ||
+        !["cash_due","paid"].includes(input.status) || !cashTimestamp(input.collectedAt) || !cashTimestamp(input.remittedAt) ||
+        (action==="remitted" && (!reference || reference.length>200 || /[\p{Cc}\p{Cf}]/u.test(reference))))
+        return Response.json({error:"Enter a valid PKR amount and courier reference, then refresh if the cash record changed."},{status:400});
+      const snapshot:CodCashSnapshot={...expected,totalCents:input.totalCents,status:input.status,collectedAt:input.collectedAt,remittedAt:input.remittedAt};
+      await recordCodEvent(db,id,`cod-${action}`,amount,reference,snapshot);
+      return Response.json({fulfillmentStatus,order:(await listCodFulfillmentOrders(db,id))[0]},{headers:noStore});
+    }
     if (action === "restock") {
       const { itemId, qty, returnedQty } = input;
       if (!positiveInteger(itemId) || !positiveInteger(qty) ||

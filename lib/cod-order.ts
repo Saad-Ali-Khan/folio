@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { and, eq, exists, gt, inArray, isNull, lt, notInArray, or, sql } from "drizzle-orm";
 import type { Database } from "./db";
-import { books, codRequests, orderItems, orders, type CodDelivery } from "./db/schema";
+import { books, codRequests, orderItems, orders, type CodDelivery, type Order } from "./db/schema";
 import { CheckoutError, matchesCodFulfillment, reserveBookStock, type CodFulfillmentSnapshot } from "./order-service";
 import { shippingFor, STORE_CURRENCY } from "./store-policy";
 
@@ -65,6 +65,8 @@ export async function listCodFulfillmentOrders(db: Database, id?: number) {
     order: {
       id: orders.id, phone: orders.phone, delivery: orders.shippingAddress,
       fulfillmentStatus: orders.fulfillmentStatus, trackingNumber: orders.trackingNumber,
+      status: orders.status, collectedAt: orders.collectedAt, remittedAt: orders.remittedAt,
+      remittanceReference: orders.remittanceReference, remittedCents: orders.remittedCents,
       subtotalCents: orders.subtotalCents, shippingCents: orders.shippingCents, totalCents: orders.totalCents,
     },
     item: { id: orderItems.id, title: orderItems.title, qty: orderItems.qty, returnedQty: orderItems.returnedQty },
@@ -73,6 +75,7 @@ export async function listCodFulfillmentOrders(db: Database, id?: number) {
     .where(and(eq(orders.paymentMethod, "cod"), id === undefined ? or(
       and(eq(orders.status, "cash_due"), inArray(orders.fulfillmentStatus, ["unfulfilled", "packed", "shipped"])),
       eq(orders.fulfillmentStatus, "returning"),
+      and(eq(orders.fulfillmentStatus,"delivered"),inArray(orders.status,["cash_due","paid"]),isNull(orders.remittedAt)),
     ) : eq(orders.id, id)))
     .orderBy(orders.id, orderItems.id);
 
@@ -169,11 +172,29 @@ export async function cancelCodOrder(db: Database, id: number, expected?: CodFul
   });
 }
 
-export async function recordCodEvent(db: Database, id: number, event: string, amount?: number, reference?: string) {
+export type CodCashSnapshot = CodFulfillmentSnapshot & Pick<Order,"status"|"totalCents"> & {
+  collectedAt:string|null; remittedAt:string|null;
+};
+
+export async function recordCodEvent(db: Database, id: number, event: string, amount?: number, reference?: string, expected?:CodCashSnapshot) {
   await db.transaction(async tx => {
     const [order] = await tx.select().from(orders)
       .where(and(eq(orders.id, id), eq(orders.paymentMethod, "cod"))).for("update");
     if (!order) throw new CheckoutError("COD order not found.", 404);
+
+    if(expected && (event==="cod-collected" || event==="cod-remitted")) {
+      if(order.fulfillmentStatus!==expected.fulfillmentStatus || order.subtotalCents!==expected.subtotalCents || order.totalCents!==expected.totalCents)
+        throw new CheckoutError("The order changed. Refresh orders before recording cash.",409);
+      // Identical retries after a lost response are harmless. Different payout details never overwrite a receipt.
+      if(event==="cod-collected" && order.collectedAt && order.status==="paid" && amount===order.totalCents)return;
+      if(event==="cod-remitted" && order.remittedAt) {
+        if(order.remittedCents===amount && order.remittanceReference===reference?.trim())return;
+        throw new CheckoutError("A different payout is already recorded. Refresh orders and check the courier statement.",409);
+      }
+      if(order.status!==expected.status || (order.collectedAt?.toISOString()??null)!==expected.collectedAt ||
+        (order.remittedAt?.toISOString()??null)!==expected.remittedAt)
+        throw new CheckoutError("The cash record changed. Refresh orders before continuing.",409);
+    }
 
     if (event === "cod-refused" && order.fulfillmentStatus === "shipped" && order.status === "cash_due") {
       await tx.update(orders).set({ fulfillmentStatus: "returning", status: "void" }).where(eq(orders.id, id));
@@ -184,20 +205,20 @@ export async function recordCodEvent(db: Database, id: number, event: string, am
       return;
     }
     if (event === "cod-collected" && order.fulfillmentStatus === "delivered" && order.status === "cash_due") {
-      if (amount !== order.totalCents) throw new Error("Collected cash must match the order total. Check the courier record.");
+      if (amount !== order.totalCents) throw new CheckoutError("Collected cash must match the order total. Check the courier record.",400);
       await tx.update(orders).set({ status: "paid", collectedAt: new Date() }).where(eq(orders.id, id));
       return;
     }
     if (event === "cod-remitted" && order.collectedAt && !order.remittedAt) {
       if (amount === undefined || !Number.isSafeInteger(amount) || amount < 0 ||
           amount > order.totalCents || !reference?.trim() || reference.length > 200) {
-        throw new Error("Enter the net payout in PKR and its courier statement reference.");
+        throw new CheckoutError("Enter a net payout between zero and the order total, with its courier statement reference.",400);
       }
       await tx.update(orders).set({
         remittedAt: new Date(), remittanceReference: reference.trim(), remittedCents: amount,
       }).where(eq(orders.id, id));
       return;
     }
-    throw new CheckoutError("This action is unavailable at the current order stage.");
+    throw new CheckoutError("This action is unavailable at the current order stage.",409);
   });
 }

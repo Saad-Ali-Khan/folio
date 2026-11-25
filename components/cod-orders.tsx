@@ -4,9 +4,10 @@ import { useEffect, useState } from "react";
 import type { listCodFulfillmentOrders } from "@/lib/cod-order";
 import type { CodDelivery } from "@/lib/db/schema";
 import { formatPrice } from "@/lib/format";
+import {CodCashPanel,cashStatus,type CashDetails} from "@/components/cod-cash-panel";
 
 type FulfillmentOrder = Awaited<ReturnType<typeof listCodFulfillmentOrders>>[number];
-type Action = "packed" | "shipped" | "delivered" | "cancelled" | "refused" | "returned" | "restock";
+type Action = "packed" | "shipped" | "delivered" | "cancelled" | "refused" | "returned" | "restock" | "collected" | "remitted";
 type ReturnDetails = { itemId: number; qty: number; returnedQty: number };
 
 const labels: Record<string, string> = {
@@ -51,7 +52,7 @@ export function CodOrders({ approvalCount, onStockChanged, onExpired }: {
     return () => controller.abort();
   }, [approvalCount, refreshCount, lookupId, onExpired]);
 
-  async function update(order: FulfillmentOrder, action: Action, details?: ReturnDetails | { tracking: string }) {
+  async function update(order: FulfillmentOrder, action: Action, details?: ReturnDetails | { tracking: string } | CashDetails) {
     if (busy) return;
     setBusy(true);
     setError("");
@@ -62,20 +63,24 @@ export function CodOrders({ approvalCount, onStockChanged, onExpired }: {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id: order.id, action, fulfillmentStatus: order.fulfillmentStatus, subtotalCents: order.subtotalCents, ...details,
+          ...(["collected","remitted"].includes(action)?{status:order.status,totalCents:order.totalCents,collectedAt:order.collectedAt,remittedAt:order.remittedAt}:{}),
         }),
       });
       if (response.status === 401) { onExpired(); return; }
       const data = await response.json();
       if (!response.ok) throw new Error(data.error);
-      const completed = lookupId === undefined && (action === "cancelled" || action === "delivered");
+      const completed = lookupId === undefined && (action === "cancelled" || action === "remitted");
       setOrders(current => current?.flatMap(entry => {
         if (entry.id !== order.id) return [entry];
         if (completed) return [];
+        if(data.order)return [data.order];
         return [{ ...entry, fulfillmentStatus: data.fulfillmentStatus,
           trackingNumber: details && "tracking" in details ? details.tracking.trim() : entry.trackingNumber }];
       }));
       if (action === "returned") setLookupId(order.id);
-      setNotice(action === "restock" ? `Inspected copies from order #${order.id} were restocked.` :
+      setNotice(action === "collected"?`Customer cash collection recorded for order #${order.id}. Courier payout is still pending.`:
+        action === "remitted"?`Courier payout recorded for order #${order.id}. Find this order by number to review its cash record.`:
+        action === "restock" ? `Inspected copies from order #${order.id} were restocked.` :
         `Order #${order.id} marked ${action}.${action === "cancelled" ? " Its stock was restored." : ""}`);
       if (action === "cancelled" || action === "restock") onStockChanged();
     } catch (caught) {
@@ -89,7 +94,7 @@ export function CodOrders({ approvalCount, onStockChanged, onExpired }: {
   return (
     <section className="mt-8 rounded-xl border border-ink/10 bg-white/50 p-5" aria-labelledby="cod-orders-heading">
       <div className="flex items-center justify-between gap-4">
-        <h2 id="cod-orders-heading" className="font-display text-2xl">COD fulfillment</h2>
+        <h2 id="cod-orders-heading" className="font-display text-2xl">COD fulfillment and cash</h2>
         <button type="button" className="text-sm text-accent underline disabled:opacity-50" disabled={busy}
           onClick={() => { setError(""); setRefreshCount(value => value + 1); }}>
           Refresh orders
@@ -128,7 +133,7 @@ export function CodOrders({ approvalCount, onStockChanged, onExpired }: {
         return (
           <details key={order.id} open={lookupId === order.id || undefined} className="mt-3 rounded-lg border border-ink/10 p-4 text-sm">
             <summary className="cursor-pointer font-medium">
-              Order #{order.id} · {labels[order.fulfillmentStatus]} · {formatPrice(order.totalCents)}
+              Order #{order.id} · {labels[order.fulfillmentStatus]} · {formatPrice(order.totalCents)} · {cashStatus(order)}
             </summary>
             <div className="mt-3 space-y-3">
               <div>
@@ -158,6 +163,7 @@ export function CodOrders({ approvalCount, onStockChanged, onExpired }: {
               </ul>
               <p>Shipping {formatPrice(order.shippingCents)} · {canCancel || canRefuse ? "Collect on delivery" : "Order total"} {formatPrice(order.totalCents)}</p>
               {order.trackingNumber && <p>Tracking number {order.trackingNumber}</p>}
+              <CodCashPanel order={order} busy={busy} onRecord={(action,details)=>void update(order,action,details)}/>
               {order.fulfillmentStatus === "packed" && (
                 <form className="flex flex-wrap items-end gap-3" onSubmit={event => {
                   event.preventDefault();

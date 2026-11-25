@@ -272,7 +272,7 @@ async function main(){
     assert.equal((await updateOrder({id:nextOrder.id, action:'shipped', fulfillmentStatus:'packed', tracking:' TRACK-2 '})).status, 200);
     assert.equal((await updateOrder({id:nextOrder.id, action:'cancelled', fulfillmentStatus:'shipped'})).status, 409);
     assert.equal((await updateOrder({id:nextOrder.id, action:'delivered', fulfillmentStatus:'shipped'})).status, 200);
-    assert.deepEqual((await (await loadOrders()).json()).orders, []);
+    assert.deepEqual((await (await loadOrders()).json()).orders.map((row:{id:number})=>row.id), [nextOrder.id], 'delivered order remains visible until cash settlement');
     const [updatedOrder] = await db.select().from(schema.orders).where(eq(schema.orders.id, nextOrder.id));
     assert.equal(updatedOrder.trackingNumber, 'TRACK-2');
     assert.equal(updatedOrder.status, 'cash_due');
@@ -285,7 +285,7 @@ async function main(){
     assert.equal((await returnAction({action:'packed'})).status, 200);
     assert.equal((await returnAction({action:'shipped', fulfillmentStatus:'packed', tracking:'RETURN-1'})).status, 200);
     assert.equal((await returnAction({action:'refused', fulfillmentStatus:'shipped'})).status, 200);
-    const {orders: [returning]} = await (await loadOrders()).json();
+    const returning = (await (await loadOrders()).json()).orders.find((row:{id:number})=>row.id===returnOrder.id);
     assert.equal(returning.fulfillmentStatus, 'returning');
     const restock = (fulfillmentStatus: string, qty: number, returnedQty: number, itemId = returning.items[0].id) =>
       returnAction({action:'restock', fulfillmentStatus, itemId, qty, returnedQty});
@@ -293,7 +293,7 @@ async function main(){
     assert.equal(await stock(), 0);
     assert.equal((await returnAction({action:'returned', fulfillmentStatus:'returning'})).status, 200);
     assert.equal(await stock(), 0, 'Receiving a parcel does not restock it');
-    assert.deepEqual((await (await loadOrders()).json()).orders, []);
+    assert.deepEqual((await (await loadOrders()).json()).orders.map((row:{id:number})=>row.id), [nextOrder.id]);
     const {orders: [received]} = await (await loadOrders(returnOrder.id)).json();
     assert.equal(received.fulfillmentStatus, 'returned');
     assert.equal((await restock('returned', 1, 0, returnedItem.id)).status, 404);
