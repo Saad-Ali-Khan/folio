@@ -9,7 +9,7 @@ import { importDiscordBook } from "./discord-inventory";
 import { queueTitleChoice } from "./title-choice";
 
 export type CoverReply = { reply: string; completed?: boolean; titleChoiceId?: string; cleanupAt?: string;
-  coverSuggestions?: {id:string;title:string;author:string;coverUrl:string;source:string}[];
+  coverSuggestions?: {id:string;title:string;author:string;coverUrl:string;source:string;note?:string}[];
   suggestedCatalog?: {title:string;coverUrl:string;source:string};
   manualCoverId?: string; manualDraftChoice?: { id: string; coverId: string; qty: number };
   coverMatch?: { id: string; covers: { id: string; label: string }[] } };
@@ -73,11 +73,11 @@ export async function resolveCoverBarcode(db: Database, id: string, channelId: s
     if (/^[a-f0-9]{20}$/.test(selection)) await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${'folio:manual-cover:' + selection}))`);
     const [choice] = await tx.select().from(coverBarcodeChoices).where(eq(coverBarcodeChoices.id, id)).for("update");
     if (!choice || choice.channelId !== channelId || choice.userId !== userId || !userId) return { error: "Cover confirmation not found for your account and channel." };
-    if (choice.state !== "pending") return { result: choice.result ?? { reply: "This cover confirmation was already handled. No additional stock was added.", completed: true } };
+    if (choice.state !== "pending") return { result: choice.result ?? { reply: choice.state === "cancelled" ? "Cancelled. Stock unchanged." : "This cover confirmation was already handled. No additional stock was added.", completed: true } };
     if (choice.expiresAt.getTime() <= Date.now()) return { error: "Cover confirmation expired. No stock was added.", completed: true };
     if (choice.metadata.manualEntryId && selection !== "CANCEL" && selection !== choice.metadata.manualEntryId) return { error: "Confirm the saved cover or cancel this draft. No stock was added." };
     if (selection === "CANCEL") {
-      await tx.update(coverBarcodeChoices).set({ state: "cancelled" }).where(eq(coverBarcodeChoices.id, id));
+      await tx.update(coverBarcodeChoices).set({ state: "cancelled", result: { reply: "Cancelled. Stock unchanged.", completed: true } }).where(eq(coverBarcodeChoices.id, id));
       return { error: "Cancelled. Stock unchanged.", completed: true };
     }
     if (selection === "SKIP") return { choice };

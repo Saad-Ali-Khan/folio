@@ -7,6 +7,7 @@ export type EditionCandidate = {
   language?: string;
   edition?: string;
   matchQuality?: "close" | "possible";
+  identityEvidence?: "partial-title-author" | "author-and-artwork";
   isbn: string | null;
   coverUrl: string;
   source: string;

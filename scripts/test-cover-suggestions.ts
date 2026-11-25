@@ -6,7 +6,7 @@ import {eq} from "drizzle-orm";
 import sharp from "sharp";
 import * as schema from "../lib/db/schema";
 import type {Database} from "../lib/db";
-import {partialCoverQueries,suggestCoverCandidates,supportsSuggestion} from "../lib/cover-suggestions";
+import {partialCoverQueries,suggestCoverCandidates,supportsSuggestion,visibleAuthorAllows} from "../lib/cover-suggestions";
 import {queueSuggestedCover,previewSuggestedCover} from "../lib/suggested-cover";
 import {retainFailedCover,resolveCoverBarcode} from "../lib/pending-covers";
 import {queueManualCover} from "../lib/manual-cover";
@@ -17,6 +17,17 @@ async function main(){
   const lines=[{text:"F. Kafka",height:.1,confidence:98},{text:"The Complete",height:.1,confidence:96},{text:"tories",height:.1,confidence:82}];
   assert.deepEqual(partialCoverQueries(lines),["kafka","the complete","tories"]);
   assert.deepEqual(partialCoverQueries([{text:"Winner of the prize",height:.1,confidence:99},{text:"Il",height:1,confidence:99}]),[]);
+  const clutter=[{text:"The novel of",height:.025,confidence:99},{text:"books ablaze",height:.024,confidence:99},
+    {text:"Fahrenheit",height:.146,confidence:97,top:.2},{text:"Ray",height:.157,confidence:95,top:.635},{text:"Bradbury",height:.179,confidence:84,top:.743}];
+  const prominent=partialCoverQueries(clutter);assert(prominent.includes("fahrenheit"));assert(prominent.includes("ray bradbury"));
+  assert(!prominent.slice(0,2).some(query=>query==="books ablaze"||query==="the novel"));
+  const attribution=partialCoverQueries([{text:"the CATCHER",height:.088,confidence:96},{text:"INRYE",height:.094,confidence:78},
+    {text:"a novel by J. D SALINGER",height:.054,confidence:97}]);
+  assert.deepEqual(attribution.slice(0,2),["the catcher","salinger"]);
+  const authorInitials=[{text:"a novel by J. D SALINGER",height:.054,confidence:97}];
+  assert(visibleAuthorAllows("J. D. Salinger",authorInitials));
+  assert(!visibleAuthorAllows("Margaret A. Salinger",authorInitials),"a matching surname cannot override incompatible visible initials");
+  assert(visibleAuthorAllows("Franz Kafka",[{text:"F. Kafka",height:.1,confidence:98}]));
   const candidate={title:"The Complete Stories",author:"Franz Kafka",publisher:"Penguin Random House",identity:"isbn:9780805210552",
     coverUrl:"https://d9z6htgewkjtb.cloudfront.net/9780805210552.webp",source:"https://readings.com.pk/book/1819875",catalog:"Readings catalog"};
   assert(supportsSuggestion(candidate,partialCoverQueries(lines)));
@@ -28,6 +39,20 @@ async function main(){
   assert.equal((await suggestCoverCandidates(Buffer.from("test"),lines,{...deps,search:async()=>{throw Error("catalog unavailable");}})).length,0);
   assert.equal((await suggestCoverCandidates(Buffer.from("test"),lines,{...deps,search:async()=>[{...candidate,coverUrl:"http://127.0.0.1/private"}]})).length,0);
   assert.equal((await suggestCoverCandidates(Buffer.from("test"),lines.slice(0,1),deps)).length,0);
+  const authorOnly=[{text:"Franz Kafka",height:.05,confidence:98}];
+  const closeDeps={...deps,search:async()=>[candidate],compare:async()=>({gray:.10,color:.10,score:.10})};
+  const authorProposal=await suggestCoverCandidates(Buffer.from("test"),authorOnly,closeDeps);
+  assert.equal(authorProposal.length,1);assert.equal(authorProposal[0].identityEvidence,"author-and-artwork");
+  assert.equal((await suggestCoverCandidates(Buffer.from("test"),authorOnly,{...closeDeps,compare:async()=>({gray:.13,color:.10,score:.115})})).length,0,"author-only proposals use a stricter artwork threshold");
+  assert.equal((await suggestCoverCandidates(Buffer.from("test"),[{text:"F. Kafka",height:.05,confidence:98}],closeDeps)).length,0,"an initial cannot verify the full author name for this fallback");
+  const ol={...candidate,identity:"work:/works/OL123W",source:"https://openlibrary.org/works/OL123W",coverUrl:"https://covers.openlibrary.org/b/id/123-L.jpg?default=false"};
+  const olProposal=await suggestCoverCandidates(Buffer.from("test"),lines,{...deps,search:async()=>[ol]});
+  assert.equal(olProposal[0].isbn,null,"work artwork does not establish an edition ISBN");
+  const bounded=await suggestCoverCandidates(Buffer.from("test"),lines,{...deps,deadlineMs:100,discover:()=>new Promise(()=>{})});
+  assert.equal(bounded.length,1,"a slow catalog cannot erase already compared matches at the deadline");
+  const extra={...candidate,title:"The Complete Stories and Parables",source:"https://readings.com.pk/book/2"};
+  const limited=await suggestCoverCandidates(Buffer.from("test"),lines,{...deps,search:async()=>[candidate,extra]});
+  assert.deepEqual(limited.map(row=>row.title),[candidate.title],"a stronger base-title match suppresses unsupported extended/collection titles");
   console.log("PASS partial clues, separate title/author evidence, image thresholds, catalog outage and image-host bounds");
   const engine=new PGlite(),db=drizzle(engine,{schema}) as unknown as Database;
   const globals=globalThis as typeof globalThis & {folioDb?:Promise<Database>};const previousDb=globals.folioDb,previousFetch=globalThis.fetch;
@@ -72,10 +97,13 @@ async function main(){
     assert.equal((await previewSuggestedCover(db,id3,"owner","channel")).manualDraftChoice,undefined);
     await resolveCoverBarcode(db,id3,"channel","owner",cover3,store);assert.equal((await db.select().from(schema.books)).length,2);
     const fourth=await retainFailedCover(db,"fourth","channel","owner",image,1,store),cover4=fourth.manualCoverId!;
-    const offered4=await queueSuggestedCover(db,cover4,"owner","channel",candidates),id4=offered4!.coverSuggestions![0].id;
+    const offered4=await queueSuggestedCover(db,cover4,"owner","channel",authorProposal),id4=offered4!.coverSuggestions![0].id;
+    assert.match(catalogSuggestionUi(offered4!).embeds[0].description,/Only the full author name/);
+    assert.match((await previewSuggestedCover(db,id4,"owner","channel")).reply,/not verified OCR/);
     await resolveCoverBarcode(db,id4,"channel","owner","CANCEL",store);
     assert.equal((await previewSuggestedCover(db,id4,"owner","channel")).manualDraftChoice,undefined);
-    await resolveCoverBarcode(db,id4,"channel","owner",cover4,store);assert.equal((await db.select().from(schema.books)).length,2);
+    assert.match((await resolveCoverBarcode(db,id4,"channel","owner",cover4,store)).reply,/Cancelled\. Stock unchanged/);
+    assert.equal((await db.select().from(schema.books)).length,2);
     console.log("PASS owner/channel/API authorization, explicit two-step preview/confirm, replay/concurrency, expiry/edit invalidation, separate draft and unlinked ISBN; existing stock unchanged. No real messages or inventory touched.");
   }finally{globals.folioDb=previousDb;globalThis.fetch=previousFetch;keys.forEach((key,i)=>{if(previous[i]===undefined)delete process.env[key];else process.env[key]=previous[i];});await engine.close();}
 }
