@@ -1,0 +1,195 @@
+{
+  "lines": [
+    {
+      "text": "(The, Little P",
+      "height": 0.0625,
+      "top": 0.1275,
+      "confidence": 63
+    },
+    {
+      "text": "o\\ °",
+      "height": 0.015,
+      "top": 0.391875,
+      "confidence": 45
+    },
+    {
+      "text": "-7",
+      "height": 0.01125,
+      "top": 0.4075,
+      "confidence": 69
+    },
+    {
+      "text": "int Ex péry",
+      "height": 0.0375,
+      "top": 0.818125,
+      "confidence": 90
+    },
+    {
+      "text": "The,",
+      "height": 0.05875,
+      "top": 0.12375,
+      "confidence": 85
+    },
+    {
+      "text": "Prunce",
+      "height": 0.05875,
+      "top": 0.12375,
+      "confidence": 89
+    },
+    {
+      "text": "Little",
+      "height": 0.05875,
+      "top": 0.12375,
+      "confidence": 87
+    },
+    {
+      "text": "Prince",
+      "height": 0.05875,
+      "top": 0.12375,
+      "confidence": 93
+    },
+    {
+      "text": "he",
+      "height": 0.05875,
+      "top": 0.12375,
+      "confidence": 96
+    },
+    {
+      "text": "(The, Little, Prince,",
+      "height": 0.0625,
+      "top": 0.1275,
+      "confidence": 74
+    },
+    {
+      "text": "Ri",
+      "height": 0.01125,
+      "top": 0.423125,
+      "confidence": 51
+    },
+    {
+      "text": "N",
+      "height": 0.01625,
+      "top": 0.42875,
+      "confidence": 64
+    },
+    {
+      "text": "Antoine",
+      "height": 0.02875,
+      "top": 0.819375,
+      "confidence": 84
+    },
+    {
+      "text": "de",
+      "height": 0.02875,
+      "top": 0.819375,
+      "confidence": 97
+    },
+    {
+      "text": "Saint",
+      "height": 0.02875,
+      "top": 0.819375,
+      "confidence": 93
+    },
+    {
+      "text": "Exupery",
+      "height": 0.02875,
+      "top": 0.819375,
+      "confidence": 91
+    },
+    {
+      "text": "Exupéry",
+      "height": 0.02875,
+      "top": 0.819375,
+      "confidence": 91
+    },
+    {
+      "text": "\\ntoine",
+      "height": 0.02875,
+      "top": 0.819375,
+      "confidence": 91
+    },
+    {
+      "text": "Antoine de Saint Exupéry",
+      "height": 0.0325,
+      "top": 0.82125,
+      "confidence": 94
+    }
+  ],
+  "misleadingDoc": {
+    "author_key": [
+      "OL31901A",
+      "OL15814779A"
+    ],
+    "author_name": [
+      "Antoine de Saint-Exupéry",
+      "Marie de Saint-Exupéry"
+    ],
+    "cover_i": 2137759,
+    "edition_count": 24,
+    "key": "/works/OL86695W",
+    "title": "Lettres à sa mère",
+    "editions": {
+      "numFound": 2,
+      "start": 0,
+      "numFoundExact": true,
+      "docs": [
+        {
+          "title": "Antoine de Saint-Exupéry: Lettres à sa mère.",
+          "language": [
+            "fre"
+          ]
+        }
+      ]
+    }
+  },
+  "correctDoc": {
+    "author_key": [
+      "OL31901A"
+    ],
+    "author_name": [
+      "Antoine de Saint-Exupéry"
+    ],
+    "cover_i": 10708272,
+    "edition_count": 700,
+    "key": "/works/OL10263W",
+    "title": "Le petit prince",
+    "editions": {
+      "numFound": 106,
+      "start": 0,
+      "numFoundExact": true,
+      "docs": [
+        {
+          "title": "The Antoine De Saint-Exupery Collection (The Little Prince)",
+          "language": [
+            "eng"
+          ]
+        }
+      ]
+    }
+  },
+  "englishDoc": {
+    "author_key": [
+      "OL31901A"
+    ],
+    "author_name": [
+      "Antoine de Saint-Exupéry"
+    ],
+    "cover_i": 14491562,
+    "edition_count": 5,
+    "key": "/works/OL34698237W",
+    "title": "Little Prince",
+    "editions": {
+      "numFound": 3,
+      "start": 0,
+      "numFoundExact": true,
+      "docs": [
+        {
+          "title": "The little prince",
+          "language": [
+            "eng"
+          ]
+        }
+      ]
+    }
+  }
+}

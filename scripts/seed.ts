@@ -200,7 +200,7 @@ async function main() {
     const inserted = await db
       .insert(books)
       .values(rows)
-      .onConflictDoNothing({ target: books.isbn })
+      .onConflictDoNothing({ target: books.slug })
       .returning({ id: books.id });
 
     const [{ value }] = await db.select({ value: count() }).from(books);

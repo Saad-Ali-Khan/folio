@@ -2,8 +2,10 @@ import path from "node:path";
 import englishData from "@tesseract.js-data/eng";
 import sharp from "sharp";
 import { createWorker, OEM, PSM } from "tesseract.js";
+import { coverTextBands, dominantCoverLine } from "./cover-layout";
 
-export type CoverLine = { text: string; height: number };
+// OCR emits image-relative coordinates so different passes share reading order.
+export type CoverLine = { text: string; height: number; top?: number; confidence?: number };
 
 let activeScans = 0;
 
@@ -16,7 +18,7 @@ export async function readCoverLines(image: Buffer, focused = false): Promise<Co
   try {
     const preparation = sharp(image, { limitInputPixels: 40_000_000 })
       .rotate()
-      .resize({ width: focused ? 1800 : 1600, height: focused ? 1800 : 1600, fit: "inside" })
+      .resize({ width: 1600, height: 1600, fit: "inside" })
       .flatten({ background: "white" })
       .grayscale();
     const { data: prepared, info } = await (focused ? preparation : preparation.normalize())
@@ -32,6 +34,8 @@ export async function readCoverLines(image: Buffer, focused = false): Promise<Co
     void starting.then(started => timedOut ? started.terminate() : undefined).catch(() => {});
     worker = await Promise.race([starting, timeout]);
     const engine = worker;
+    const optionalDeadline = Date.now() + 10_000;
+    await engine.setParameters({ user_defined_dpi: "150" });
     async function scan(buffer: Buffer, mode: PSM, offset = 0) {
       await Promise.race([engine.setParameters({ tessedit_pageseg_mode: mode }), timeout]);
       const { data } = await Promise.race([engine.recognize(buffer, {}, { blocks: true }), timeout]);
@@ -48,7 +52,8 @@ export async function readCoverLines(image: Buffer, focused = false): Promise<Co
         .map(line => ({ text: line.text.trim(), height: line.bbox.y1 - line.bbox.y0, top: offset + line.bbox.y0, confidence: line.confidence }));
     }
 
-    if (!focused) return (await scan(prepared, PSM.SPARSE_TEXT)).sort((a, b) => a.top - b.top);
+    if (!focused) return (await scan(prepared, PSM.SPARSE_TEXT))
+      .map(line => ({ ...line, top: line.top / info.height, height: line.height / info.height }));
 
     // Normalize each band separately so artwork, glare, and the background do
     // not influence recognition of small text elsewhere on the cover.
@@ -59,8 +64,39 @@ export async function readCoverLines(image: Buffer, focused = false): Promise<Co
       { from: 0.88, to: 0.99, mode: PSM.SPARSE_TEXT },
     ];
     const lines = new Map<string, Awaited<ReturnType<typeof scan>>[number]>();
+    const add = (line: Awaited<ReturnType<typeof scan>>[number]) => {
+      const key = line.text.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+      if (key && line.confidence > (lines.get(key)?.confidence ?? 0)) lines.set(key, line);
+    };
+    // Detect actual text rows instead of assuming a title occupies one cover band.
+    // Small, padded line images suit large serif lettering better than a full page.
+    const layout = await coverTextBands(await sharp(prepared).normalize().png().toBuffer(), info.width, info.height);
+    for (const band of layout.bands) {
+      if (Date.now() > optionalDeadline) break;
+      const pad = Math.ceil(info.height * 0.004);
+      const top = Math.max(0, band.from - pad);
+      const height = Math.min(info.height - top, band.to - band.from + pad * 2 + 1);
+      const dominant = await dominantCoverLine(layout.binary, layout.width, top, height);
+      if (dominant) for (const word of await scan(dominant, PSM.SINGLE_LINE)) {
+        add({ ...word, top, height: band.to - band.from });
+      }
+      for (const rightPart of [false, true]) {
+        // The second view separates small conjunctions/ornament from large text.
+        // Keep the original full-page and band passes for text near cover edges.
+        const left = rightPart ? Math.floor(layout.width * 0.22) : 0;
+        const width = rightPart ? layout.width - left : Math.floor(info.width * 0.8);
+        const targetHeight = rightPart ? 45 : 90;
+        const crop = await sharp(layout.binary).extract({ left, top, width, height })
+          .resize({ height: targetHeight }).extend({ top: 10, bottom: 10, left: 10, right: 10, background: "white" })
+          .png().toBuffer();
+        for (const word of await scan(crop, PSM.SINGLE_LINE)) {
+          add({ ...word, top, height: band.to - band.from });
+        }
+      }
+    }
     const left = Math.floor(info.width * 0.1);
     for (const band of bands) {
+      if (Date.now() > optionalDeadline) break;
       const top = Math.floor(info.height * band.from);
       const crop = await sharp(prepared).extract({
         left, top, width: info.width - left * 2,
@@ -80,6 +116,7 @@ export async function readCoverLines(image: Buffer, focused = false): Promise<Co
       ? await sharp(prepared).normalize().png().toBuffer()
       : prepared;
     for (const line of prominent) {
+      if (Date.now() > optionalDeadline) break;
       const top = Math.max(0, line.top - Math.floor(line.height * 0.04));
       const height = Math.min(info.height - top, Math.floor(line.height * 1.6));
       for (const leftFraction of [0, 0.4]) {
@@ -94,7 +131,8 @@ export async function readCoverLines(image: Buffer, focused = false): Promise<Co
         }
       }
     }
-    return [...lines.values()].sort((a, b) => a.top - b.top);
+    return [...lines.values()].sort((a, b) => a.top - b.top)
+      .map(line => ({ ...line, top: line.top / info.height, height: line.height / info.height }));
   } finally {
     clearTimeout(timer);
     try { await worker?.terminate(); }

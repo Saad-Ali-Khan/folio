@@ -47,4 +47,5 @@ next-env.d.ts
 /.folio-backups/
 /.folio-backup-key
 /.folio-local/
+/.folio-ocr/
 .neon

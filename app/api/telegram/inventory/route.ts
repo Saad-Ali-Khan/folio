@@ -110,7 +110,7 @@ export async function POST(request: Request) {
     const [book, other] = await findBooksByIdentifier(db, identifier);
 
     if (other) {
-      await sendMessage(token, chatId, "Multiple editions match. Use the edition's ISBN or prefix its slug with slug:.");
+      await sendMessage(token, chatId, "Multiple listings match. Use id:<listing ID> or slug:<listing slug>.");
       return ok();
     }
 

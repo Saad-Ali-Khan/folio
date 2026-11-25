@@ -1,9 +1,10 @@
 import {queueTitleChoice} from "@/lib/title-choice";
-import { eq } from "drizzle-orm";
-import { readCoverLines } from "@/lib/cover-ocr";
-import { books, discordCommands } from "@/lib/db/schema";
-import { CatalogUnavailable, lookupCoverMetadata, lookupIsbnMetadata } from "@/lib/import-metadata";
-import { getDb } from "@/lib/db";
+import { and, eq, gt } from "drizzle-orm";
+import { recognizeCover } from "@/lib/cover-recognition";
+import { books, discordCommands, pendingCovers } from "@/lib/db/schema";
+import { CatalogUnavailable, lookupIsbnMetadata } from "@/lib/import-metadata";
+import { findBooksByIsbn, getDb } from "@/lib/db";
+import { MAX_STOCK_CHOICES, queueStockChoice } from "@/lib/discord-stock-choice";
 import type { InventoryVerb } from "@/lib/inventory-command";
 import {
   importDiscordBook,
@@ -17,6 +18,9 @@ import { lookupPublisherCover } from "@/lib/publisher-cover";
 import { PhotoImportError, storeImportPhoto } from "@/lib/import-photo";
 import { queueCoverBarcode, retainFailedCover } from "@/lib/pending-covers";
 import { notifyCoverCleanup } from "@/lib/notify-cover-cleanup";
+import {suggestCoverCandidates} from "@/lib/cover-suggestions";
+import {queueSuggestedCover} from "@/lib/suggested-cover";
+import type {CoverLine} from "@/lib/cover-ocr";
 
 const MAX_QTY = 999;
 const MAX_PHOTO_BYTES = 12 * 1024 * 1024;
@@ -46,12 +50,22 @@ function reply(text: string | null) {
   return Response.json({ reply: text });
 }
 
-async function retainCover(image: Buffer, messageId: string, channelId: string, userId: string, qty: number) {
-  if (process.env.PHOTO_STORAGE !== "r2") return reply("I couldn’t confidently identify this book. Send a sharper photo showing the title and author, or the ISBN barcode.");
+async function retainCover(image: Buffer, messageId: string, channelId: string, userId: string, qty: number, reason?: string, lines?:CoverLine[]) {
+  if (process.env.PHOTO_STORAGE !== "r2") return reply(`${reason ?? "I couldn’t match this cover to a verified catalog record."} No stock was added. Send the ISBN barcode, or try the cover again later.`);
   try {
     const data = Buffer.from(await prepareUploadedCover(image), "base64");
     const result=await retainFailedCover(await getDb(), messageId, channelId, userId, data, qty);
-    await notifyCoverCleanup(result.cleanupAt);return Response.json(result);
+    await notifyCoverCleanup(result.cleanupAt);
+    if(result.manualCoverId && lines) {
+      // Catalog outages/timeouts leave the existing barcode/manual fallback usable.
+      try {
+        const candidates=await suggestCoverCandidates(image,lines);
+        const suggested=candidates.length?await queueSuggestedCover(await getDb(),result.manualCoverId,userId,channelId,candidates):null;
+        if(suggested)return Response.json(suggested);
+      } catch { /* A proposal failure must not discard the retained cover. */ }
+    }
+    return Response.json({ ...result, reply: result.reply.replace("I couldn’t identify this cover.",
+      reason ?? "I couldn’t match this cover to a verified catalog record.") });
   } catch (error) {
     const cause=error instanceof Error ? error.cause : undefined;
     const code=cause && typeof cause === "object" && "code" in cause ? cause.code : "unknown";
@@ -126,19 +140,12 @@ export async function POST(request: Request) {
     if (!rawCode) {
       if (command.verb !== "ADD") return reply("Include a readable ISBN barcode for SET or SOLD.");
       unidentifiedCover = image;
-      const initialLines = await readCoverLines(image);
-      let firstMatch;
-      try {
-        firstMatch = await lookupCoverMetadata(initialLines);
-      } catch (error) {
-        if (!(error instanceof CatalogUnavailable)) throw error;
-        console.warn("First cover catalog lookup failed. Retrying with focused OCR.", error.cause);
-      }
-      let meta = firstMatch ?? await lookupCoverMetadata([
-        ...initialLines, ...await readCoverLines(image, true),
-      ], true);
+      const recognition = await recognizeCover(image);
+      console.info("Cover recognition completed", { stage: recognition.stage, matched: Boolean(recognition.metadata) });
+      const initialLines = recognition.lines;
+      let meta = recognition.metadata;
       const key = meta && inventoryEditionKey(meta);
-      if (!meta || !key) return retainCover(image, messageId, channelId, userId, command.qty);
+      if (!meta || !key) return retainCover(image, messageId, channelId, userId, command.qty,undefined,recognition.suggestionLines??initialLines);
       unidentifiedCover = undefined;
 
       const [coverDraft] = await db.select({ id: books.id, status: books.status }).from(books).where(eq(books.isbn, key));
@@ -158,7 +165,15 @@ export async function POST(request: Request) {
       return reply(`Decoded "${rawCode}" but it is not a book ISBN (need EAN-13 starting 978/979).`);
     }
 
-    const [book] = await db.select().from(books).where(eq(books.isbn, isbn));
+    const listings = await findBooksByIsbn(db, isbn, MAX_STOCK_CHOICES + 1);
+    if (listings.length > 1) {
+      if (listings.length > MAX_STOCK_CHOICES) return reply("This ISBN has many listings. Use id:<listing ID> or slug:<listing slug> in an inventory command. No stock was changed.");
+      const [retained] = await db.select({ id: pendingCovers.id }).from(pendingCovers).where(and(eq(pendingCovers.userId, userId),
+        eq(pendingCovers.channelId, channelId), eq(pendingCovers.state, "waiting"), gt(pendingCovers.expiresAt, new Date()))).limit(1);
+      if (retained && command.verb === "ADD") return reply("This ISBN is shared by several listings, so I haven’t added stock or attached the saved cover. Use its Enter title and author button to create a separate draft, then link the ISBN in admin; or use an exact listing ID to receive stock into an existing listing.");
+      return reply(await queueStockChoice(db, { messageId, channelId, userId }, { verb: command.verb, qty: command.qty }, listings));
+    }
+    const [book] = listings;
 
     if (book) {
       if (command.verb === "ADD") {
@@ -198,7 +213,11 @@ export async function POST(request: Request) {
       `Added "${created.title}" (${created.slug}) from ISBN ${isbn}: stock ${created.stock}. ${meta.titleNote ?? ""} Draft saved; set a price and publish before selling. Set price with \`npm run books -- edit ${created.slug} --price 1500\`.`,
     );
   } catch (error) {
-    if (unidentifiedCover && (error instanceof CatalogUnavailable || error instanceof Error && /Cover scanning timed out/.test(error.message))) return retainCover(unidentifiedCover, messageId, channelId, userId, command.qty);
+    if (error instanceof Error && /Cover scanning is busy/.test(error.message)) return reply(error.message);
+    if (unidentifiedCover && (error instanceof CatalogUnavailable || error instanceof Error && /Cover scanning timed out/.test(error.message))) {
+      return retainCover(unidentifiedCover, messageId, channelId, userId, command.qty,
+        error instanceof CatalogUnavailable ? "The book catalog didn’t respond after retrying." : "The cover scan reached its time limit.");
+    }
     if (error instanceof PhotoImportError) return reply(error.message);
     if (error instanceof CatalogUnavailable) {
       console.warn("Cover catalog unavailable after retry", error.cause);

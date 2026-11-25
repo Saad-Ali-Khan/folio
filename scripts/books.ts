@@ -1,6 +1,7 @@
-import { eq, or } from "drizzle-orm";
+import { eq, or, sql } from "drizzle-orm";
 import { createDatabase } from "../lib/db";
 import { books } from "../lib/db/schema";
+import { canonicalIsbn } from "../lib/isbn";
 
 const usage = `Usage:
   npm run books -- list
@@ -89,20 +90,30 @@ async function findBook(
   db: Awaited<ReturnType<typeof createDatabase>>["db"],
   identifier: string,
 ) {
+  if (identifier.toLowerCase().startsWith("slug:")) {
+    return (await db.select().from(books).where(eq(books.slug, identifier.slice(5).trim().toLowerCase())).limit(1))[0];
+  }
+  if (identifier.toLowerCase().startsWith("id:")) {
+    const id = Number(identifier.slice(3));
+    if (!Number.isInteger(id) || id < 1 || id > 2147483647) throw Error("Invalid listing ID");
+    return (await db.select().from(books).where(eq(books.id, id)).limit(1))[0];
+  }
   const id = Number(identifier);
+  const normalized = canonicalIsbn(identifier);
   const conditions = [
     eq(books.slug, identifier),
-    eq(books.isbn, identifier.replace(/[-\s]/g, "")),
+    normalized ? sql`folio_isbn_key(${books.isbn}) = ${normalized}` : eq(books.isbn, identifier.replace(/[-\s]/g, "")),
   ];
   if (Number.isInteger(id) && id > 0 && id <= 2147483647) {
     conditions.push(eq(books.id, id));
   }
 
-  const [book] = await db
+  const [book, other] = await db
     .select()
     .from(books)
     .where(or(...conditions))
-    .limit(1);
+    .limit(2);
+  if (other) throw Error("Multiple listings match. Use id:<listing ID> or slug:<listing slug>.");
   return book;
 }
 

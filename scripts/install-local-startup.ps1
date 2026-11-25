@@ -1,24 +1,24 @@
-param([switch]$Remove)
+param([switch]$Remove, [switch]$Update, [switch]$Describe)
 $ErrorActionPreference = 'Stop'
-$taskName = 'Folio Local Inventory'
+. (Join-Path $PSScriptRoot 'local-task-config.ps1')
+$projectRoot = Split-Path -Parent $PSScriptRoot
+$nodePath = (Get-Command node.exe -ErrorAction Stop).Source
+$configuration = Get-FolioTaskConfiguration -ProjectRoot $projectRoot -NodePath $nodePath
+$taskName = $configuration.TaskName
+if ($Describe) { $configuration | ConvertTo-Json; exit }
+$existing = Get-ScheduledTask -TaskName $taskName -TaskPath '\' -ErrorAction SilentlyContinue
+if ($existing) { Assert-FolioTaskOwnership -Task $existing -Configuration $configuration }
 if ($Remove) {
-  Unregister-ScheduledTask -TaskName $taskName -Confirm:$false
+  if ($existing) { Unregister-ScheduledTask -InputObject $existing -Confirm:$false }
   Write-Output 'Folio logon startup removed. Running services were not stopped.'
   exit
 }
-$projectRoot = Split-Path -Parent $PSScriptRoot
-$nodePath = (Get-Command node.exe -ErrorAction Stop).Source
-$entry = Join-Path $PSScriptRoot 'local-services.ts'
 $identity = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
-$existing = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
-if ($existing) { throw 'Task already exists. Inspect it or run this script with -Remove first.' }
-# A hidden host avoids a console window and does not load a PowerShell script at logon.
-$quotedNode = $nodePath.Replace("'", "''")
-$quotedEntry = $entry.Replace("'", "''")
-$arguments = '-NoProfile -WindowStyle Hidden -Command "& ''{0}'' --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx ''{1}'' start; exit $LASTEXITCODE"' -f $quotedNode, $quotedEntry
-$action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument $arguments -WorkingDirectory $projectRoot
-$trigger = New-ScheduledTaskTrigger -AtLogOn -User $identity
+if ($existing -and -not $Update) { throw 'Task already exists. Run npm run local:install-startup -- -Update to safely update it.' }
+$action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument $configuration.Arguments -WorkingDirectory $projectRoot
+$logonTrigger = New-ScheduledTaskTrigger -AtLogOn -User $identity
+$watchdogTrigger = New-ScheduledTaskTrigger -Once -At ((Get-Date).AddMinutes(1)) -RepetitionInterval (New-TimeSpan -Minutes $configuration.WatchdogMinutes)
 $principal = New-ScheduledTaskPrincipal -UserId $identity -LogonType Interactive -RunLevel Limited
-$settings = New-ScheduledTaskSettingsSet -MultipleInstances IgnoreNew -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
-Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Principal $principal -Settings $settings | Out-Null
-Write-Output 'Folio starts hidden at your next Windows logon. PC sleep/shutdown still stops imports. Run npm run local:up to start now.'
+$settings = New-ScheduledTaskSettingsSet -MultipleInstances IgnoreNew -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
+Register-ScheduledTask -TaskName $taskName -Action $action -Trigger @($logonTrigger, $watchdogTrigger) -Principal $principal -Settings $settings -Force:$Update | Out-Null
+Write-Output 'Folio startup task installed: hidden logon startup and a five-minute restart check. PC sleep/shutdown still pauses imports. Run npm run local:up to start now.'

@@ -1,0 +1,216 @@
+{
+  "initial": [
+    {
+      "text": "WILL",
+      "height": 0.0925,
+      "top": 0.068125,
+      "confidence": 94
+    },
+    {
+      "text": "DURANT",
+      "height": 0.166875,
+      "top": 0.18375,
+      "confidence": 51
+    },
+    {
+      "text": "NED 5",
+      "height": 0.100625,
+      "top": 0.5375,
+      "confidence": 62
+    },
+    {
+      "text": "L [IME",
+      "height": 0.068125,
+      "top": 0.834375,
+      "confidence": 77
+    }
+  ],
+  "focused": [
+    {
+      "text": "hai",
+      "height": 0.229375,
+      "top": 0.06,
+      "confidence": 59
+    },
+    {
+      "text": "WILL",
+      "height": 0.089375,
+      "top": 0.065,
+      "confidence": 95
+    },
+    {
+      "text": "RA",
+      "height": 0.348125,
+      "top": 0.07,
+      "confidence": 75
+    },
+    {
+      "text": "DURANT",
+      "height": 0.09875,
+      "top": 0.179375,
+      "confidence": 96
+    },
+    {
+      "text": "JURANT",
+      "height": 0.09875,
+      "top": 0.179375,
+      "confidence": 71
+    },
+    {
+      "text": "THE MEDADOF FREEDOM",
+      "height": 0.035625,
+      "top": 0.289375,
+      "confidence": 72
+    },
+    {
+      "text": "WINNER",
+      "height": 0.01625,
+      "top": 0.29875,
+      "confidence": 95
+    },
+    {
+      "text": "OF",
+      "height": 0.01625,
+      "top": 0.29875,
+      "confidence": 96
+    },
+    {
+      "text": "THE",
+      "height": 0.01625,
+      "top": 0.29875,
+      "confidence": 96
+    },
+    {
+      "text": "PULITZER",
+      "height": 0.01625,
+      "top": 0.29875,
+      "confidence": 96
+    },
+    {
+      "text": "PRIZE",
+      "height": 0.01625,
+      "top": 0.29875,
+      "confidence": 96
+    },
+    {
+      "text": "AND",
+      "height": 0.01625,
+      "top": 0.29875,
+      "confidence": 96
+    },
+    {
+      "text": "MEDAL",
+      "height": 0.01625,
+      "top": 0.29875,
+      "confidence": 93
+    },
+    {
+      "text": "FREEDOM",
+      "height": 0.01625,
+      "top": 0.29875,
+      "confidence": 96
+    },
+    {
+      "text": "PUL",
+      "height": 0.01375,
+      "top": 0.30625,
+      "confidence": 96
+    },
+    {
+      "text": "GREATEST",
+      "height": 0.0875,
+      "top": 0.39875,
+      "confidence": 92
+    },
+    {
+      "text": "REATEST",
+      "height": 0.0875,
+      "top": 0.39875,
+      "confidence": 90
+    },
+    {
+      "text": "MINDS",
+      "height": 0.115,
+      "top": 0.518125,
+      "confidence": 96
+    },
+    {
+      "text": "AINDS",
+      "height": 0.115,
+      "top": 0.518125,
+      "confidence": 90
+    },
+    {
+      "text": "IDEAS",
+      "height": 0.11375,
+      "top": 0.670625,
+      "confidence": 82
+    },
+    {
+      "text": "DEAS",
+      "height": 0.11375,
+      "top": 0.670625,
+      "confidence": 88
+    },
+    {
+      "text": "A (OC",
+      "height": 0.040625,
+      "top": 0.689375,
+      "confidence": 63
+    },
+    {
+      "text": "OFALLTIME",
+      "height": 0.0725,
+      "top": 0.83,
+      "confidence": 89
+    },
+    {
+      "text": "FALLTIME",
+      "height": 0.0725,
+      "top": 0.83,
+      "confidence": 91
+    },
+    {
+      "text": "COMPILED",
+      "height": 0.02125,
+      "top": 0.925625,
+      "confidence": 95
+    },
+    {
+      "text": "EDITED",
+      "height": 0.02125,
+      "top": 0.925625,
+      "confidence": 96
+    },
+    {
+      "text": "BY",
+      "height": 0.02125,
+      "top": 0.925625,
+      "confidence": 96
+    },
+    {
+      "text": "JOHN",
+      "height": 0.02125,
+      "top": 0.925625,
+      "confidence": 96
+    },
+    {
+      "text": "LITTLE",
+      "height": 0.02125,
+      "top": 0.925625,
+      "confidence": 96
+    },
+    {
+      "text": "OMPILED",
+      "height": 0.02125,
+      "top": 0.925625,
+      "confidence": 87
+    },
+    {
+      "text": "ITED BY JOHN LITTLE",
+      "height": 0.035,
+      "top": 0.929375,
+      "confidence": 94
+    }
+  ]
+}

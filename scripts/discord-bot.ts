@@ -1,6 +1,8 @@
 import { ActionRowBuilder, AttachmentBuilder, ButtonBuilder, ButtonStyle, Client, Events, GatewayIntentBits, MessageFlags } from "discord.js";
 import { fileURLToPath } from "node:url";
 import { acquireLock } from "./local-runtime";
+import { manualCoverModal,catalogSuggestionUi } from "../lib/discord-manual-ui";
+import type {CoverReply} from "../lib/pending-covers";
 
 try {
   const release = acquireLock(fileURLToPath(new URL("../.folio-local/bot.lock", import.meta.url)));
@@ -10,12 +12,16 @@ try {
   process.exit(78);
 }
 
-type InventoryReply = { reply?: string | null; titleChoiceId?: string; completed?: boolean; cleanupAt?: string; coverMatch?: { id: string; covers: {id:string;label:string}[] } };
+type InventoryReply = { reply?: string | null; titleChoiceId?: string; completed?: boolean; cleanupAt?: string;
+  coverSuggestions?:CoverReply["coverSuggestions"];suggestedCatalog?:CoverReply["suggestedCatalog"];
+  manualCoverId?: string; manualDraftChoice?: { id: string; coverId: string; qty: number };
+  coverMatch?: { id: string; covers: {id:string;label:string}[] } };
 
 async function replyOptions(result: InventoryReply, owner: { userId: string; channelId: string }) {
-  const components: ActionRowBuilder<ButtonBuilder>[] = [];
+  const catalog=catalogSuggestionUi(result);
+  const components: ActionRowBuilder<ButtonBuilder>[] = [...catalog.components];
   const files: AttachmentBuilder[] = [];
-  const embeds: {title:string;image:{url:string}}[] = [];
+  const embeds: {title:string;description?:string;url?:string;image:{url:string}}[] = [...catalog.embeds];
   if (result.coverMatch) {
     try {
       if (!result.coverMatch.covers.length || result.coverMatch.covers.length > 4) throw new Error("Invalid retained cover count.");
@@ -30,11 +36,17 @@ async function replyOptions(result: InventoryReply, owner: { userId: string; cha
         files.push(new AttachmentBuilder(image, { name }));
         embeds.push({ title: cover.label, image: { url: `attachment://${name}` } });
       }
-      const buttons = result.coverMatch.covers.map(c => new ButtonBuilder().setCustomId(`folio-cover:${result.coverMatch!.id}:${c.id}`).setLabel(result.coverMatch!.covers.length === 1 ? `Same book · ${c.label}` : `Use ${c.label}`).setStyle(ButtonStyle.Primary));
-      buttons.push(new ButtonBuilder().setCustomId(`folio-cover:${result.coverMatch.id}:SKIP`).setLabel("Barcode only").setStyle(ButtonStyle.Secondary), new ButtonBuilder().setCustomId(`folio-cover:${result.coverMatch.id}:CANCEL`).setLabel("Cancel scan").setStyle(ButtonStyle.Secondary));
+      const buttons = result.coverMatch.covers.map(c => new ButtonBuilder().setCustomId(`folio-cover:${result.coverMatch!.id}:${c.id}`)
+        .setLabel(result.manualDraftChoice ? `Confirm draft · ${result.manualDraftChoice.qty} ${result.manualDraftChoice.qty === 1 ? "copy" : "copies"}`
+          : result.coverMatch!.covers.length === 1 ? `Same book · ${c.label}` : `Use ${c.label}`).setStyle(ButtonStyle.Primary));
+      if (result.manualDraftChoice) buttons.push(new ButtonBuilder().setCustomId(`folio-manual:${result.manualDraftChoice.coverId}`).setLabel("Edit title/author").setStyle(ButtonStyle.Secondary));
+      else buttons.push(new ButtonBuilder().setCustomId(`folio-cover:${result.coverMatch.id}:SKIP`).setLabel("Barcode only").setStyle(ButtonStyle.Secondary));
+      buttons.push(new ButtonBuilder().setCustomId(`folio-cover:${result.coverMatch.id}:CANCEL`).setLabel("Cancel scan").setStyle(ButtonStyle.Secondary));
       for (let i=0;i<buttons.length;i+=5) components.push(new ActionRowBuilder<ButtonBuilder>().addComponents(...buttons.slice(i,i+5)));
     } catch {
-      return { content: "The retained cover preview is unavailable or expired. No stock was added. Send the barcode again to retry.", components: [], files: [], embeds: [], allowedMentions: { parse: [], repliedUser: false } };
+      return { content: result.manualDraftChoice
+        ? "The saved cover preview is unavailable or expired. No stock was added. Reopen the form if the cover is still available, or upload a new photo."
+        : "The retained cover preview is unavailable or expired. No stock was added. Send the barcode again to retry.", components: [], files: [], embeds: [], allowedMentions: { parse: [], repliedUser: false } };
     }
   }
   if (result.titleChoiceId) {
@@ -45,6 +57,8 @@ async function replyOptions(result: InventoryReply, owner: { userId: string; cha
       new ButtonBuilder().setCustomId(`folio-title:${id}:CANCEL`).setLabel("Cancel").setStyle(ButtonStyle.Secondary),
     ));
   }
+  if (result.manualCoverId && /^[a-f0-9]{20}$/.test(result.manualCoverId)) components.push(new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder().setCustomId(`folio-manual:${result.manualCoverId}`).setLabel("Enter title and author").setStyle(ButtonStyle.Primary)));
   return { content: result.reply ?? "", components, files, embeds, allowedMentions: { parse: [], repliedUser: false } };
 }
 
@@ -153,12 +167,50 @@ client.on(Events.MessageCreate, async (message) => {
 });
 
 client.on(Events.InteractionCreate, async interaction => {
-  if (!interaction.isButton() || interaction.channelId !== channelId) return;
+  if (interaction.channelId !== channelId) return;
+  if (interaction.isModalSubmit()) {
+    const form = /^folio-manual-form:([a-f0-9]{20})$/.exec(interaction.customId);
+    if (!form) return;
+    try {
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+      const result = await postToInventory("/api/discord/inventory", {
+        headers: { "content-type": "application/json" }, body: JSON.stringify({
+          messageId: interaction.id, channelId: interaction.channelId, userId: interaction.user.id,
+          manualCover: { id: form[1], title: interaction.fields.getTextInputValue("title"), author: interaction.fields.getTextInputValue("author") },
+        }),
+      });
+      await interaction.editReply(await replyOptions(result, { userId: interaction.user.id, channelId: interaction.channelId! }));
+    } catch {
+      if (interaction.deferred || interaction.replied) await interaction.editReply({ content: "Could not prepare the manual draft. No stock was added. Try the form again.", components: [], embeds: [], attachments: [] }).catch(() => {});
+    }
+    return;
+  }
+  if (!interaction.isButton()) return;
+  const manual = /^folio-manual:([a-f0-9]{20})$/.exec(interaction.customId);
+  if (manual) {
+    try { await interaction.showModal(manualCoverModal(manual[1], interaction.message.content)); }
+    catch { /* Expired Discord interaction; no inventory operation was requested. */ }
+    return;
+  }
+  const suggestion=/^folio-suggest:([a-f0-9]{10})$/.exec(interaction.customId);
+  if(suggestion) {
+    try {
+      await interaction.deferReply({flags:MessageFlags.Ephemeral});
+      const result=await postToInventory("/api/discord/inventory",{headers:{"content-type":"application/json"},
+        body:JSON.stringify({messageId:interaction.id,channelId:interaction.channelId,userId:interaction.user.id,suggestionChoice:{id:suggestion[1]}})});
+      await interaction.editReply(await replyOptions(result,{userId:interaction.user.id,channelId:interaction.channelId!}));
+    } catch {
+      if(interaction.deferred||interaction.replied)await interaction.editReply({content:"Could not load the catalog suggestion. No stock was added. Try manual entry or the barcode.",components:[],embeds:[]}).catch(()=>{});
+    }
+    return;
+  }
   const choice = /^folio-title:([0-9a-f]{10}):(ENGLISH|ORIGINAL|CANCEL)$/.exec(interaction.customId);
   const cover = /^folio-cover:([0-9a-f]{10}):([0-9a-f]{20}|SKIP|CANCEL)$/.exec(interaction.customId);
   if (!choice && !cover) return;
   try {
-    await interaction.reply({
+    const privatePreview = interaction.message.flags.has(MessageFlags.Ephemeral);
+    if (privatePreview) await interaction.deferUpdate();
+    else await interaction.reply({
       content: "Saving your confirmation…",
       flags: MessageFlags.Ephemeral,
       allowedMentions: { parse: [] },
@@ -172,6 +224,10 @@ client.on(Events.InteractionCreate, async interaction => {
         ...(choice ? { titleChoice: { id: choice[1], selection: choice[2] } } : { coverChoice: { id: cover![1], selection: cover![2] } }),
       }),
     });
+    if (privatePreview) {
+      await interaction.editReply({ ...await replyOptions(result, { userId: interaction.user.id, channelId: interaction.channelId! }), attachments: [] });
+      return;
+    }
     let updated = false;
     if (result.completed) {
       updated = await interaction.message.edit({ ...await replyOptions(result, {userId:interaction.user.id,channelId:interaction.channelId!}), attachments: [] })

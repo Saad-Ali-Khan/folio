@@ -1,10 +1,10 @@
 import { sql } from "drizzle-orm";
-import { integer, jsonb, pgTable, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { index, integer, jsonb, pgTable, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import type { EditionCandidate } from "../edition-types";
 
 export const books = pgTable("books", {
   id: serial("id").primaryKey(),
-  isbn: text("isbn").notNull().unique(),
+  isbn: text("isbn").notNull(),
   slug: text("slug").notNull().unique(),
   title: text("title").notNull(),
   author: text("author").notNull(),
@@ -14,7 +14,8 @@ export const books = pgTable("books", {
   coverUrl: text("cover_url"),
   status: text("status").notNull().default("draft"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-}, table => [uniqueIndex("books_canonical_isbn_unique").on(sql`folio_isbn_key(${table.isbn})`)]);
+}, table => [index("books_canonical_isbn_idx").on(sql`folio_isbn_key(${table.isbn})`),
+  uniqueIndex("books_unverified_key_unique").on(table.isbn).where(sql`folio_isbn_key(${table.isbn}) IS NULL`)]);
 
 export const orders = pgTable("orders", {
   id: serial("id").primaryKey(),

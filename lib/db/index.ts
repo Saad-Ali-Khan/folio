@@ -2,6 +2,7 @@ import path from "node:path";
 import { desc, eq, or, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import * as schema from "./schema";
+import { canonicalIsbn } from "../isbn";
 
 export type Database = PostgresJsDatabase<typeof schema>;
 
@@ -104,17 +105,29 @@ export function getDb(): Promise<Database> {
   return globalForDb.folioDb;
 }
 
+export async function findBooksByIsbn(db: Database, rawIsbn: string, limit = 2): Promise<schema.Book[]> {
+  const isbn = rawIsbn.replace(/[-\s]/g, ""), normalized = canonicalIsbn(isbn);
+  return db.select().from(schema.books).where(normalized ? sql`folio_isbn_key(${schema.books.isbn}) = ${normalized}` : eq(schema.books.isbn, isbn))
+    .orderBy(schema.books.id).limit(limit);
+}
+
 export async function findBooksByIdentifier(
   db: Database,
   identifier: string,
   limit = 2,
 ): Promise<schema.Book[]> {
   const key = identifier.toLowerCase();
+  if (key.startsWith("id:")) {
+    const value = key.slice(3).trim();
+    if (!/^\d+$/.test(value) || !Number.isSafeInteger(Number(value)) || Number(value) < 1 || Number(value) > 2147483647) return [];
+    return db.select().from(schema.books).where(eq(schema.books.id, Number(value))).limit(1);
+  }
   if (key.startsWith("slug:")) {
     return db.select().from(schema.books).where(eq(schema.books.slug, key.slice(5).trim())).limit(1);
   }
   const isbn = identifier.replace(/[-\s]/g, "");
-  const byIsbn = eq(schema.books.isbn, isbn);
+  const normalized = canonicalIsbn(isbn);
+  const byIsbn = normalized ? sql<boolean>`coalesce(folio_isbn_key(${schema.books.isbn}) = ${normalized}, false)` : eq(schema.books.isbn, isbn);
   const bySlug = eq(schema.books.slug, key);
   const matches = await db
     .select()
@@ -122,7 +135,7 @@ export async function findBooksByIdentifier(
     .where(or(byIsbn, bySlug, sql`lower(${schema.books.title}) = ${key}`))
     .orderBy(desc(byIsbn), desc(bySlug), schema.books.id)
     .limit(limit);
-  const first = matches[0];
   // A plain slug may also be the title of another edition, such as "dune".
-  return first?.isbn === isbn ? [first] : matches;
+  const isbnMatches = matches.filter(book => normalized ? canonicalIsbn(book.isbn) === normalized : book.isbn === isbn);
+  return isbnMatches.length ? isbnMatches : matches;
 }

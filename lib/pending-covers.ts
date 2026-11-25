@@ -9,6 +9,9 @@ import { importDiscordBook } from "./discord-inventory";
 import { queueTitleChoice } from "./title-choice";
 
 export type CoverReply = { reply: string; completed?: boolean; titleChoiceId?: string; cleanupAt?: string;
+  coverSuggestions?: {id:string;title:string;author:string;coverUrl:string;source:string}[];
+  suggestedCatalog?: {title:string;coverUrl:string;source:string};
+  manualCoverId?: string; manualDraftChoice?: { id: string; coverId: string; qty: number };
   coverMatch?: { id: string; covers: { id: string; label: string }[] } };
 const ttl = 15 * 60_000;
 export type PendingPhotoStore = ReturnType<typeof createR2PhotoStore>;
@@ -35,7 +38,7 @@ export async function retainFailedCover(db: Database, sourceMessageId: string, c
   } else if (row.row.state !== "waiting" || row.row.expiresAt.getTime() <= Date.now()) {
     return { reply: "This cover was already handled, is still saving, or has expired. No stock was added.", cleanupAt: row.row.expiresAt.toISOString() };
   }
-  return { reply: `I couldn’t identify this cover. I’ve kept its photo privately for 15 minutes. Send this book’s ISBN barcode next; I’ll ask you to confirm they are the same book before adding stock. Retained quantity: ${qty}.`, cleanupAt: row.row.expiresAt.toISOString() };
+  return { reply: `I couldn’t identify this cover. I’ve kept its photo privately for 15 minutes. Send this book’s ISBN barcode, or enter its title and author below. I’ll ask you to confirm before adding stock. Retained quantity: ${qty}.`, manualCoverId: row.row.id, cleanupAt: row.row.expiresAt.toISOString() };
 }
 
 export async function queueCoverBarcode(db: Database, sourceMessageId: string, channelId: string, userId: string, metadata: ImportMetadata, qty: number, explicitQty = false): Promise<CoverReply | null> {
@@ -67,16 +70,18 @@ export async function readRetainedCover(db: Database, id: string, userId: string
 export async function resolveCoverBarcode(db: Database, id: string, channelId: string, userId: string, selection: string, store = createR2PhotoStore()): Promise<CoverReply> {
   if (!/^(?:[a-f0-9]{20}|SKIP|CANCEL)$/.test(selection)) return { reply: "Invalid cover selection." };
   const claim = await db.transaction(async tx => {
+    if (/^[a-f0-9]{20}$/.test(selection)) await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${'folio:manual-cover:' + selection}))`);
     const [choice] = await tx.select().from(coverBarcodeChoices).where(eq(coverBarcodeChoices.id, id)).for("update");
-    if (!choice || choice.channelId !== channelId || choice.userId !== userId || !userId) return { error: "Barcode confirmation not found for your account and channel." };
-    if (choice.state !== "pending") return { result: choice.result ?? { reply: "This barcode request was already handled. No additional stock was added.", completed: true } };
-    if (choice.expiresAt.getTime() <= Date.now()) return { error: "Barcode confirmation expired. No stock was added.", completed: true };
+    if (!choice || choice.channelId !== channelId || choice.userId !== userId || !userId) return { error: "Cover confirmation not found for your account and channel." };
+    if (choice.state !== "pending") return { result: choice.result ?? { reply: "This cover confirmation was already handled. No additional stock was added.", completed: true } };
+    if (choice.expiresAt.getTime() <= Date.now()) return { error: "Cover confirmation expired. No stock was added.", completed: true };
+    if (choice.metadata.manualEntryId && selection !== "CANCEL" && selection !== choice.metadata.manualEntryId) return { error: "Confirm the saved cover or cancel this draft. No stock was added." };
     if (selection === "CANCEL") {
       await tx.update(coverBarcodeChoices).set({ state: "cancelled" }).where(eq(coverBarcodeChoices.id, id));
       return { error: "Cancelled. Stock unchanged.", completed: true };
     }
     if (selection === "SKIP") return { choice };
-    if (!choice.coverIds.includes(selection)) return { error: "That cover was not offered for this barcode." };
+    if (!choice.coverIds.includes(selection)) return { error: "That cover was not offered for this request." };
     const [cover] = await tx.select().from(pendingCovers).where(eq(pendingCovers.id, selection)).for("update");
     if (!cover || cover.userId !== userId || cover.channelId !== channelId || cover.expiresAt.getTime() <= Date.now() || !(cover.state === "waiting" || cover.state === "claimed" && cover.claimId === id)) return { error: "That cover expired or was already claimed. No stock was added." };
     // A short processing lease prevents expiry cleanup racing an in-flight confirmation.
@@ -92,8 +97,8 @@ export async function resolveCoverBarcode(db: Database, id: string, channelId: s
   }
   return db.transaction(async tx => {
     const [choice] = await tx.select().from(coverBarcodeChoices).where(eq(coverBarcodeChoices.id, id)).for("update");
-    if (choice.state !== "pending") return { reply: "This barcode request was already handled. No additional stock was added.", completed: true };
-    if (choice.expiresAt.getTime() <= Date.now()) throw new Error("Barcode confirmation expired during processing.");
+    if (choice.state !== "pending") return { reply: "This cover confirmation was already handled. No additional stock was added.", completed: true };
+    if (choice.expiresAt.getTime() <= Date.now()) throw new Error("Cover confirmation expired during processing.");
     if (claim.cover) {
       const [cover] = await tx.select().from(pendingCovers).where(eq(pendingCovers.id, claim.cover.id)).for("update");
       if (!cover || cover.state !== "claimed" || cover.claimId !== id || cover.expiresAt.getTime() <= Date.now()) throw new Error("Cover claim changed during processing.");

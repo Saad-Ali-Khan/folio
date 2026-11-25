@@ -7,7 +7,7 @@ import type { Database } from "../lib/db";
 import * as schema from "../lib/db/schema";
 import { applyMigrations } from "../lib/db/migrations";
 import { canonicalIsbn } from "../lib/isbn";
-import { getEdition, storeEditionCandidates, type EditionError } from "../lib/book-editions";
+import { getEdition, storeEditionCandidates } from "../lib/book-editions";
 import type { EditionInput, EditionCandidate } from "../lib/edition-types";
 import { deleteAdminBook, updateAdminBook } from "../lib/admin-books";
 import { importDiscordBook } from "../lib/discord-inventory";
@@ -71,17 +71,17 @@ async function main() {
     assert.match((await getEdition(db, book.id)).evidence, /admin confirmed against the physical copy/);
     assert.match((await getEdition(db, book.id)).evidence, /Catalog reference: Readings catalog, https:\/\/readings.com.pk\/book\/1/);
     const [other] = await db.insert(schema.books).values({ isbn: "manual-other-copy", slug: "other-copy", title: "Other title", author: "Other author", priceCents: 10000, stock: 3 }).returning();
-    const beforeCollisionMovements = (await db.select().from(schema.stockMovements)).length;
-    await assert.rejects(updateAdminBook(db, { ...input(other, { ...edition, expectedIsbn: other.isbn, linkIsbn: "9780141037455", isbnConfirmed: true, isbnEvidence: "Test physical scan" }), title: "Must roll back", stock: 7, stockReason: "Synthetic collision test" }), (error: unknown) => (error as EditionError).status === 409);
-    const [unchanged] = await db.select().from(schema.books).where(eq(schema.books.id, other.id));
-    assert.equal(unchanged.title, other.title); assert.equal(unchanged.stock, 3);
-    assert.equal((await getEdition(db, other.id)).revision, 0);
-    assert.equal((await db.select().from(schema.stockMovements)).length, beforeCollisionMovements);
-    await assert.rejects(db.insert(schema.books).values({ isbn: "0141037458", slug: "duplicate-alias", title: "Duplicate", author: "Test", priceCents: 0 }));
-    const imported = await importDiscordBook(db, "alias-import", "test-channel", { title: linked.title, author: linked.author, isbn: "0141037458", coverUrl: null }, 1);
-    assert.equal(imported?.stock, 3);
-    assert.equal((await db.select().from(schema.books)).length, 2);
-    console.log("PASS physical ISBN linking preserves ID/slug/stock; alias collisions roll back every field and concurrent imports cannot duplicate the edition");
+    const beforeSharedMovements = (await db.select().from(schema.stockMovements)).length;
+    const second = await updateAdminBook(db, input(other, { ...edition, expectedIsbn: other.isbn,
+      linkIsbn: "9780141037455", isbnConfirmed: true, isbnEvidence: "Test physical scan" }));
+    assert.equal(second.isbn, linked.isbn); assert.equal(second.stock, 3); assert.equal(second.title, other.title);
+    assert.equal((await db.select().from(schema.books).where(eq(schema.books.id, linked.id)))[0].stock, 2);
+    assert.equal((await db.select().from(schema.stockMovements)).length, beforeSharedMovements);
+    await db.insert(schema.books).values({ isbn: "0141037458", slug: "duplicate-alias", title: "Duplicate", author: "Test", priceCents: 0 });
+    await assert.rejects(importDiscordBook(db, "alias-import", "test-channel", { title: linked.title, author: linked.author, isbn: "0141037458", coverUrl: null }, 1), /Multiple listings/);
+    assert.equal((await db.select().from(schema.books)).length, 3);
+    assert.equal((await db.select().from(schema.books).where(eq(schema.books.id, linked.id)))[0].stock, 2);
+    console.log("PASS shared physical ISBN linking preserves separate IDs, slugs and stock; alias matches require listing selection");
 
     await queueTitleChoice(db, "cover-choice", "test-channel", "operator", { title: "Example translation", author: "Example author", isbn: null,
       coverUrl: null, coverWorkId: "OL123W", editionCandidates: [candidate], titleOptions: { english: "Example translation", original: "Original title" } }, 1);

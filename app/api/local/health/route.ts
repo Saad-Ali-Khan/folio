@@ -3,6 +3,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import englishData from "@tesseract.js-data/eng";
 import sharp from "sharp";
+import { localOcrHealth } from "@/lib/local-ocr-client";
 
 export const runtime = "nodejs";
 
@@ -16,7 +17,9 @@ export async function GET(request: Request) {
   const configured = ["DISCORD_CHANNEL_ID", "INVENTORY_DISCORD_PIN", "DATABASE_URL"].every(key => Boolean(process.env[key]?.trim()));
   const ocrAssets = existsSync(path.join(path.dirname(englishData.langPath), "4.0.0_best_int", "eng.traineddata.gz"));
   const ready = configured && ocrAssets && Boolean(sharp.versions.vips);
-  return Response.json({ service: "folio-local-inventory", ready, configured, ocrAssets, database: "not probed" }, {
+  const mobile = process.env.FOLIO_OCR_ENGINE === "paddle" ? await localOcrHealth() : undefined;
+  return Response.json({ service: "folio-local-inventory", ready, configured, ocrAssets, database: "not probed",
+    ocr: { engine: mobile ? "paddle-mobile" : "tesseract", ready: mobile?.ready ?? true, degraded: Boolean(mobile && !mobile.ready), modelLoads: mobile?.modelLoads } }, {
     status: ready ? 200 : 503, headers: { "Cache-Control": "no-store" },
   });
 }

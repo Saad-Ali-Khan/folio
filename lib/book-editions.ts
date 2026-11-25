@@ -1,4 +1,4 @@
-import { and, eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import type { Database } from "./db";
 import { bookEditions, books } from "./db/schema";
 import { canonicalIsbn } from "./isbn";
@@ -52,10 +52,7 @@ export async function saveEdition(db: Database, bookId: number, input: EditionIn
     if (!book.isbn.startsWith("manual-") && canonicalIsbn(book.isbn) !== normalized) {
       throw new EditionError("This listing already has an ISBN. Review that edition separately; replacing its ISBN is not supported.", 409);
     }
-    // The database's normalized unique index also protects against simultaneous imports.
-    const [collision] = await db.select({ id: books.id, title: books.title }).from(books)
-      .where(and(sql`${books.id} <> ${bookId}`, sql`folio_isbn_key(${books.isbn}) = ${normalized}`)).limit(1);
-    if (collision) throw new EditionError(`ISBN already belongs to “${collision.title}” (listing ${collision.id}). Nothing was merged or restocked.`, 409);
+    // ISBN identifies the publication; listing ID owns this row's stock/details.
     isbn = normalized;
   }
   const isbnSource = chosen?.isbn && canonicalIsbn(chosen.isbn) === isbn

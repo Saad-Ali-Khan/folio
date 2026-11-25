@@ -122,7 +122,7 @@ async function main(){
   assert.match(await send('plain-slug','ADD dune-hardback 1'), /OK dune-hardback: stock 4/);
   assert.match(await send('exact-isbn','SET 978-0-441-17271-9 2'), /OK dune: stock 2/);
   assert.match(await send('bad-slug','ADD slug:unknown 1'), /No book uses that slug/);
-  assert.match(await send('ambiguous-price','PRICE Dune 99'), /Multiple editions match/);
+  assert.match(await send('ambiguous-price','PRICE Dune 99'), /Multiple listings match/);
   assert.match(await send('price-limit','PRICE slug:dune 1000000.00'), /Price updated/);
   assert.match(await send('price-over-limit','PRICE slug:dune 1000000.01'), /maximum book price/);
   const [priced] = await db.select().from(schema.books).where(eq(schema.books.id, paperback.id));

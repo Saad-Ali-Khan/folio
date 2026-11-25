@@ -1,0 +1,5525 @@
+[
+  {
+    "id": "little-prince-upload-tesseract",
+    "provenance": "Open Library search responses captured 2026-11-24; OCR from visually reviewed benchmark photo. Homer alias below is a separate test fixture.",
+    "expectedTitle": "The Little Prince",
+    "expectedAuthor": "Antoine de Saint-Exupéry",
+    "lines": [
+      {
+        "text": "(The, Little P",
+        "height": 0.0625,
+        "top": 0.1275,
+        "confidence": 63
+      },
+      {
+        "text": "o\\ °",
+        "height": 0.015,
+        "top": 0.391875,
+        "confidence": 45
+      },
+      {
+        "text": "-7",
+        "height": 0.01125,
+        "top": 0.4075,
+        "confidence": 69
+      },
+      {
+        "text": "int Ex péry",
+        "height": 0.0375,
+        "top": 0.818125,
+        "confidence": 90
+      },
+      {
+        "text": "The,",
+        "height": 0.05875,
+        "top": 0.12375,
+        "confidence": 85
+      },
+      {
+        "text": "Prunce",
+        "height": 0.05875,
+        "top": 0.12375,
+        "confidence": 89
+      },
+      {
+        "text": "Little",
+        "height": 0.05875,
+        "top": 0.12375,
+        "confidence": 87
+      },
+      {
+        "text": "Prince",
+        "height": 0.05875,
+        "top": 0.12375,
+        "confidence": 93
+      },
+      {
+        "text": "he",
+        "height": 0.05875,
+        "top": 0.12375,
+        "confidence": 96
+      },
+      {
+        "text": "(The, Little, Prince,",
+        "height": 0.0625,
+        "top": 0.1275,
+        "confidence": 74
+      },
+      {
+        "text": "Ri",
+        "height": 0.01125,
+        "top": 0.423125,
+        "confidence": 51
+      },
+      {
+        "text": "N",
+        "height": 0.01625,
+        "top": 0.42875,
+        "confidence": 64
+      },
+      {
+        "text": "Antoine",
+        "height": 0.02875,
+        "top": 0.819375,
+        "confidence": 84
+      },
+      {
+        "text": "de",
+        "height": 0.02875,
+        "top": 0.819375,
+        "confidence": 97
+      },
+      {
+        "text": "Saint",
+        "height": 0.02875,
+        "top": 0.819375,
+        "confidence": 93
+      },
+      {
+        "text": "Exupery",
+        "height": 0.02875,
+        "top": 0.819375,
+        "confidence": 91
+      },
+      {
+        "text": "Exupéry",
+        "height": 0.02875,
+        "top": 0.819375,
+        "confidence": 91
+      },
+      {
+        "text": "\\ntoine",
+        "height": 0.02875,
+        "top": 0.819375,
+        "confidence": 91
+      },
+      {
+        "text": "Antoine de Saint Exupéry",
+        "height": 0.0325,
+        "top": 0.82125,
+        "confidence": 94
+      }
+    ],
+    "responses": [
+      {
+        "query": "title:(\"the\" AND \"little\" AND \"prince\") OR title:(\"the\" AND \"prunce\" AND \"little\" AND \"the\" AND \"little\" AND \"prince\") OR title:(\"prunce\" AND \"little\" AND \"the\" AND \"little\" AND \"prince\") OR title:(\"little\" AND \"the\" AND \"little\" AND \"prince\") OR title:(\"the\" AND \"prunce\" AND \"little\") OR title:(\"prunce\" AND \"little\")",
+        "response": {
+          "numFound": 469,
+          "start": 0,
+          "numFoundExact": true,
+          "num_found": 469,
+          "documentation_url": "https://openlibrary.org/dev/docs/api/search",
+          "q": "title:(\"the\" AND \"little\" AND \"prince\") OR title:(\"the\" AND \"prunce\" AND \"little\" AND \"the\" AND \"little\" AND \"prince\") OR title:(\"prunce\" AND \"little\" AND \"the\" AND \"little\" AND \"prince\") OR title:(\"little\" AND \"the\" AND \"little\" AND \"prince\") OR title:(\"the\" AND \"prunce\" AND \"little\") OR title:(\"prunce\" AND \"little\")",
+          "offset": null,
+          "docs": [
+            {
+              "author_key": [
+                "OL31901A"
+              ],
+              "author_name": [
+                "Antoine de Saint-Exupéry"
+              ],
+              "cover_i": 10708272,
+              "edition_count": 700,
+              "key": "/works/OL10263W",
+              "title": "Le petit prince",
+              "editions": {
+                "numFound": 103,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "El Principito / The Little Prince",
+                    "language": [
+                      "spa",
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL31901A"
+              ],
+              "author_name": [
+                "Antoine de Saint-Exupéry"
+              ],
+              "cover_i": 14491562,
+              "edition_count": 5,
+              "key": "/works/OL34698237W",
+              "title": "Little Prince",
+              "editions": {
+                "numFound": 3,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The little prince",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL2414885A"
+              ],
+              "author_name": [
+                "Dinah Maria Mulock Craik"
+              ],
+              "cover_i": 2842966,
+              "edition_count": 33,
+              "key": "/works/OL207979W",
+              "title": "The Little Lame Prince",
+              "editions": {
+                "numFound": 31,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The little lame prince",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL7317905A"
+              ],
+              "author_name": [
+                "Thomas Barichella"
+              ],
+              "cover_i": 7605288,
+              "edition_count": 1,
+              "key": "/works/OL17451527W",
+              "title": "The Little Prince",
+              "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The Little Prince"
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL6887254A"
+              ],
+              "author_name": [
+                "Conor Grennan"
+              ],
+              "cover_i": 6680706,
+              "edition_count": 10,
+              "key": "/works/OL15662518W",
+              "title": "Little Princes",
+              "editions": {
+                "numFound": 8,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Little princes",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL2414885A"
+              ],
+              "author_name": [
+                "Dinah Maria Mulock Craik"
+              ],
+              "edition_count": 12,
+              "key": "/works/OL30171889W",
+              "title": "Little Lame Prince",
+              "editions": {
+                "numFound": 2,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The Little Lame Prince"
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL31901A"
+              ],
+              "author_name": [
+                "Antoine de Saint-Exupéry"
+              ],
+              "cover_i": 10746692,
+              "edition_count": 2,
+              "key": "/works/OL24259583W",
+              "title": "A day with the little prince",
+              "editions": {
+                "numFound": 2,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "A day with the little prince",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL2931794A"
+              ],
+              "author_name": [
+                "Barbara Valdez"
+              ],
+              "edition_count": 1,
+              "key": "/works/OL8678586W",
+              "title": "The Little Prince [by] Antoine de Saint Exupéry : teacher guide",
+              "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The Little Prince [by] Antoine de Saint Exupéry : teacher guide",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL7698526A"
+              ],
+              "author_name": [
+                "Sheng ai ke su pei li"
+              ],
+              "cover_i": 8972020,
+              "edition_count": 11,
+              "key": "/works/OL20311451W",
+              "title": "Xiao wang zi",
+              "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Xiao wang zi",
+                    "language": [
+                      "chi"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL31901A",
+                "OL5593705A"
+              ],
+              "author_name": [
+                "Antoine de Saint-Exupéry",
+                "Katherine Woods"
+              ],
+              "edition_count": 4,
+              "key": "/works/OL34342511W",
+              "title": "Little Prince",
+              "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The Little Prince"
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL1394601A"
+              ],
+              "author_name": [
+                "Joann Sfar"
+              ],
+              "cover_i": 6685779,
+              "edition_count": 1,
+              "key": "/works/OL15675440W",
+              "title": "The little prince",
+              "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The little prince"
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL7317196A"
+              ],
+              "author_name": [
+                "Christel Gonnard"
+              ],
+              "cover_i": 7600637,
+              "edition_count": 1,
+              "key": "/works/OL17449193W",
+              "title": "The Little Prince",
+              "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The Little Prince"
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL1435559A"
+              ],
+              "author_name": [
+                "Hester Browne"
+              ],
+              "cover_i": 2787150,
+              "edition_count": 5,
+              "key": "/works/OL5849579W",
+              "title": "The Little Lady Agency and the Prince",
+              "editions": {
+                "numFound": 5,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The Little Lady Agency and the Prince",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL31901A"
+              ],
+              "author_name": [
+                "Antoine de Saint-Exupéry"
+              ],
+              "edition_count": 3,
+              "key": "/works/OL41352497W",
+              "title": "Little Prince",
+              "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Little Prince",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL31901A",
+                "OL1394601A"
+              ],
+              "author_name": [
+                "Antoine de Saint-Exupéry",
+                "Joann Sfar"
+              ],
+              "cover_i": 11555254,
+              "edition_count": 2,
+              "key": "/works/OL24793081W",
+              "title": "The Little Prince Graphic Novel",
+              "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The Little Prince Graphic Novel"
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL454394A"
+              ],
+              "author_name": [
+                "James E. Higgins"
+              ],
+              "cover_i": 1521217,
+              "edition_count": 1,
+              "key": "/works/OL2971897W",
+              "title": "The little prince",
+              "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The little prince",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL627874A"
+              ],
+              "author_name": [
+                "Roger Hargreaves"
+              ],
+              "cover_i": 7809032,
+              "edition_count": 1,
+              "key": "/works/OL17553705W",
+              "title": "Little Miss Chatterbox and the Frog Prince",
+              "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Little Miss Chatterbox and the Frog Prince"
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL31901A",
+                "OL3437171A"
+              ],
+              "author_name": [
+                "Antoine de Saint-Exupéry",
+                "Gallimard"
+              ],
+              "cover_i": 966008,
+              "edition_count": 3,
+              "key": "/works/OL34904927W",
+              "title": "Le Petit Prince",
+              "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Le Petit Prince (The Little Prince) French edition"
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL31901A"
+              ],
+              "author_name": [
+                "Antoine de Saint-Exupéry"
+              ],
+              "cover_i": 8673785,
+              "edition_count": 10,
+              "key": "/works/OL19728527W",
+              "title": "Xiao wang zi Guangdong hua ban =",
+              "editions": {
+                "numFound": 2,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Xiao wang zi",
+                    "language": [
+                      "chi"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL898795A"
+              ],
+              "author_name": [
+                "John Melady"
+              ],
+              "cover_i": 13085206,
+              "edition_count": 2,
+              "key": "/works/OL4495790W",
+              "title": "The little princes",
+              "editions": {
+                "numFound": 2,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The little princes",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL1394601A"
+              ],
+              "author_name": [
+                "Joann Sfar"
+              ],
+              "cover_i": 13455214,
+              "edition_count": 1,
+              "key": "/works/OL15958525W",
+              "title": "The little prince",
+              "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The little prince",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL7314267A"
+              ],
+              "author_name": [
+                "Studio Elyum"
+              ],
+              "cover_i": 7580582,
+              "edition_count": 1,
+              "key": "/works/OL17439141W",
+              "title": "The Little Prince",
+              "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The Little Prince"
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL9485591A",
+                "OL9485592A",
+                "OL9485593A"
+              ],
+              "author_name": [
+                "Hwameiyuan Press",
+                "Hwameiyuan Press",
+                "Hwameiyuan Press"
+              ],
+              "cover_i": 11974009,
+              "edition_count": 1,
+              "key": "/works/OL25134954W",
+              "title": "Le Petit Prince -- 小王子 : The Little Prince",
+              "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Le Petit Prince -- 小王子 : The Little Prince"
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL26881A"
+              ],
+              "author_name": [
+                "Peter Sís"
+              ],
+              "cover_i": 11695223,
+              "edition_count": 1,
+              "key": "/works/OL19977207W",
+              "title": "The pilot and the little prince",
+              "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The pilot and the little prince",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "little-prince-upload-paddle",
+    "provenance": "Open Library search responses captured 2026-11-24; OCR from visually reviewed benchmark photo. Homer alias below is a separate test fixture.",
+    "expectedTitle": "The Little Prince",
+    "expectedAuthor": "Antoine de Saint-Exupéry",
+    "lines": [
+      {
+        "text": "7184",
+        "confidence": 34.533339738845825,
+        "top": 0.010625,
+        "height": 0.01125,
+        "left": 0.9716666666666667
+      },
+      {
+        "text": "W",
+        "confidence": 30.342939496040344,
+        "top": 0.020625,
+        "height": 0.01375,
+        "left": 0.9541666666666667
+      },
+      {
+        "text": "The Little Prince",
+        "confidence": 98.42115044593811,
+        "top": 0.113125,
+        "height": 0.086875,
+        "left": 0.18833333333333332
+      },
+      {
+        "text": "Antoine de Saint Exupéry",
+        "confidence": 98.33289980888367,
+        "top": 0.81625,
+        "height": 0.0425,
+        "left": 0.22833333333333333
+      }
+    ],
+    "responses": [
+      {
+        "query": "title:(\"the\" AND \"little\" AND \"prince\") OR title:(\"the\" AND \"little\" AND \"prince\" AND \"antoine\" AND \"de\" AND \"saint\" AND \"exupery\") OR title:(\"antoine\" AND \"de\" AND \"saint\" AND \"exupery\")",
+        "response": {
+          "numFound": 699,
+          "start": 0,
+          "numFoundExact": true,
+          "num_found": 699,
+          "documentation_url": "https://openlibrary.org/dev/docs/api/search",
+          "q": "title:(\"the\" AND \"little\" AND \"prince\") OR title:(\"the\" AND \"little\" AND \"prince\" AND \"antoine\" AND \"de\" AND \"saint\" AND \"exupery\") OR title:(\"antoine\" AND \"de\" AND \"saint\" AND \"exupery\")",
+          "offset": null,
+          "docs": [
+            {
+              "author_key": [
+                "OL31901A"
+              ],
+              "author_name": [
+                "Antoine de Saint-Exupéry"
+              ],
+              "cover_i": 10708272,
+              "edition_count": 700,
+              "key": "/works/OL10263W",
+              "title": "Le petit prince",
+              "editions": {
+                "numFound": 106,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The Antoine De Saint-Exupery Collection (The Little Prince)",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL2931794A"
+              ],
+              "author_name": [
+                "Barbara Valdez"
+              ],
+              "edition_count": 1,
+              "key": "/works/OL8678586W",
+              "title": "The Little Prince [by] Antoine de Saint Exupéry : teacher guide",
+              "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The Little Prince [by] Antoine de Saint Exupéry : teacher guide",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL31901A",
+                "OL5593705A"
+              ],
+              "author_name": [
+                "Antoine de Saint-Exupéry",
+                "Katherine Woods"
+              ],
+              "edition_count": 4,
+              "key": "/works/OL34342511W",
+              "title": "Little Prince",
+              "editions": {
+                "numFound": 2,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Little Prince",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL26881A"
+              ],
+              "author_name": [
+                "Peter Sís"
+              ],
+              "cover_i": 11695223,
+              "edition_count": 1,
+              "key": "/works/OL19977207W",
+              "title": "The pilot and the little prince",
+              "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The pilot and the little prince",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL31901A"
+              ],
+              "author_name": [
+                "Antoine de Saint-Exupéry"
+              ],
+              "cover_i": 967072,
+              "edition_count": 124,
+              "key": "/works/OL86701W",
+              "title": "Terre des hommes",
+              "editions": {
+                "numFound": 3,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Antoine de Saint Exupery WIND, SAND AND STARS Reynal & Hitchcock HC/DJ BMOC",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL31901A"
+              ],
+              "author_name": [
+                "Antoine de Saint-Exupéry"
+              ],
+              "cover_i": 8673785,
+              "edition_count": 10,
+              "key": "/works/OL19728527W",
+              "title": "Xiao wang zi Guangdong hua ban =",
+              "editions": {
+                "numFound": 3,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Xiao wang zi",
+                    "language": [
+                      "chi"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL507309A"
+              ],
+              "author_name": [
+                "Webster, Paul"
+              ],
+              "edition_count": 2,
+              "key": "/works/OL3171589W",
+              "title": "Antoine de Saint-Exupéry",
+              "editions": {
+                "numFound": 2,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Antoine de Saint-Exupéry",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "edition_count": 1,
+              "key": "/works/OL31280010W",
+              "title": "The Little Prince By Antoine De Saint-exupéry, 1st Edition , Harcourt, Brece & Worlds New York",
+              "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The Little Prince By Antoine De Saint-exupéry, 1st Edition , Harcourt, Brece & Worlds New York"
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL1978714A"
+              ],
+              "author_name": [
+                "Paul Webster"
+              ],
+              "edition_count": 1,
+              "key": "/works/OL7051007W",
+              "title": "Antoine de Saint-Exupery",
+              "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Antoine de Saint-Exupery"
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL3720809A"
+              ],
+              "author_name": [
+                "Howard Scherry"
+              ],
+              "edition_count": 1,
+              "key": "/works/OL9730207W",
+              "title": "Antoine De Saint-Exupery & \"the Little Prince\"",
+              "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Antoine De Saint-Exupery & \"the Little Prince\"",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL31901A"
+              ],
+              "author_name": [
+                "Antoine de Saint-Exupéry"
+              ],
+              "cover_i": 14491562,
+              "edition_count": 5,
+              "key": "/works/OL34698237W",
+              "title": "Little Prince",
+              "editions": {
+                "numFound": 3,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The little prince",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL2414885A"
+              ],
+              "author_name": [
+                "Dinah Maria Mulock Craik"
+              ],
+              "cover_i": 2842966,
+              "edition_count": 33,
+              "key": "/works/OL207979W",
+              "title": "The Little Lame Prince",
+              "editions": {
+                "numFound": 31,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The little lame prince",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL334426A"
+              ],
+              "author_name": [
+                "Curtis Cate"
+              ],
+              "cover_i": 9698447,
+              "edition_count": 6,
+              "key": "/works/OL2425990W",
+              "title": "Antoine de Saint-Exupéry",
+              "editions": {
+                "numFound": 6,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Antoine de Saint-Exupéry",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL1428132A"
+              ],
+              "author_name": [
+                "Bimba Landmann"
+              ],
+              "edition_count": 1,
+              "key": "/works/OL26322627W",
+              "title": "In Search of the Little Prince",
+              "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "In Search of the Little Prince",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL7317905A"
+              ],
+              "author_name": [
+                "Thomas Barichella"
+              ],
+              "cover_i": 7605288,
+              "edition_count": 1,
+              "key": "/works/OL17451527W",
+              "title": "The Little Prince",
+              "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The Little Prince"
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL2179067A"
+              ],
+              "author_name": [
+                "Jean-Claude Ibert"
+              ],
+              "edition_count": 5,
+              "key": "/works/OL180892W",
+              "title": "Antoine de Saint-Exupery",
+              "editions": {
+                "numFound": 4,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Antoine de Saint-Exupery.",
+                    "language": [
+                      "fre"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL2179067A"
+              ],
+              "author_name": [
+                "Jean-Claude Ibert"
+              ],
+              "edition_count": 8,
+              "key": "/works/OL180893W",
+              "title": "Antoine de Saint-Exupéry",
+              "editions": {
+                "numFound": 8,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Antoine de Saint-Exupéry",
+                    "language": [
+                      "fre"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL2215901A"
+              ],
+              "author_name": [
+                "Richard Rumbold"
+              ],
+              "cover_i": 9717373,
+              "edition_count": 12,
+              "key": "/works/OL7429646W",
+              "title": "Saint-Exupery tel quel",
+              "editions": {
+                "numFound": 5,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The winged life",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL6887254A"
+              ],
+              "author_name": [
+                "Conor Grennan"
+              ],
+              "cover_i": 6680706,
+              "edition_count": 10,
+              "key": "/works/OL15662518W",
+              "title": "Little Princes",
+              "editions": {
+                "numFound": 8,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Little princes",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL2414885A"
+              ],
+              "author_name": [
+                "Dinah Maria Mulock Craik"
+              ],
+              "edition_count": 12,
+              "key": "/works/OL30171889W",
+              "title": "Little Lame Prince",
+              "editions": {
+                "numFound": 2,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The Little Lame Prince"
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL31901A"
+              ],
+              "author_name": [
+                "Antoine de Saint-Exupéry"
+              ],
+              "cover_i": 10746692,
+              "edition_count": 2,
+              "key": "/works/OL24259583W",
+              "title": "A day with the little prince",
+              "editions": {
+                "numFound": 2,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "A day with the little prince",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL1788426A"
+              ],
+              "author_name": [
+                "Josef Theisen"
+              ],
+              "edition_count": 3,
+              "key": "/works/OL6640850W",
+              "title": "Antoine de Saint-Exupéry",
+              "editions": {
+                "numFound": 3,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Antoine de Saint-Exupéry.",
+                    "language": [
+                      "und"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL10420251A",
+                "OL10425139A",
+                "OL10425928A",
+                "OL31901A"
+              ],
+              "author_name": [
+                "Libros Salamander",
+                "Gonzalo D.",
+                "Modesto V.",
+                "Antoine de Saint-Exupéry"
+              ],
+              "edition_count": 1,
+              "key": "/works/OL27943824W",
+              "title": "Principito - lo Esencial Es Invisible a Los Ojos",
+              "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Principito - lo Esencial Es Invisible a Los Ojos",
+                    "language": [
+                      "spa"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL31901A"
+              ],
+              "author_name": [
+                "Antoine de Saint-Exupéry"
+              ],
+              "cover_i": 2210130,
+              "edition_count": 64,
+              "key": "/works/OL10265W",
+              "title": "Pilote de guerre",
+              "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Pilote de Guerre",
+                    "language": [
+                      "fre"
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "web-gatsby-window-paddle",
+    "provenance": "Open Library search responses captured 2026-11-24; OCR from visually reviewed benchmark photo. Homer alias below is a separate test fixture.",
+    "expectedTitle": "The Great Gatsby",
+    "expectedAuthor": "F. Scott Fitzgerald",
+    "lines": [
+      {
+        "text": "F. SCOTT",
+        "confidence": 99.3517279624939,
+        "top": 0.240625,
+        "height": 0.0325,
+        "left": 0.4058333333333333
+      },
+      {
+        "text": "FITZGERALD",
+        "confidence": 99.97695684432983,
+        "top": 0.27375,
+        "height": 0.028125,
+        "left": 0.375
+      },
+      {
+        "text": "o",
+        "confidence": 30.98326027393341,
+        "top": 0.409375,
+        "height": 0.01125,
+        "left": 0.5325
+      },
+      {
+        "text": "THE",
+        "confidence": 99.47156310081482,
+        "top": 0.446875,
+        "height": 0.065625,
+        "left": 0.4025
+      },
+      {
+        "text": "o",
+        "confidence": 35.66596806049347,
+        "top": 0.479375,
+        "height": 0.01,
+        "left": 0.5608333333333333
+      },
+      {
+        "text": "GREAT",
+        "confidence": 99.57723617553711,
+        "top": 0.5075,
+        "height": 0.085,
+        "left": 0.29833333333333334
+      },
+      {
+        "text": "GATSBY",
+        "confidence": 92.23321080207825,
+        "top": 0.58625,
+        "height": 0.086875,
+        "left": 0.26916666666666667
+      },
+      {
+        "text": "",
+        "confidence": 0,
+        "top": 0.66875,
+        "height": 0.015625,
+        "left": 0.39166666666666666
+      }
+    ],
+    "responses": [
+      {
+        "query": "title:(\"great\" AND \"gatsby\") OR title:(\"the\" AND \"great\" AND \"gatsby\") OR title:(\"the\" AND \"great\") OR title:(\"f\" AND \"scott\") OR title:(\"f\" AND \"scott\" AND \"fitzgerald\" AND \"the\" AND \"great\" AND \"gatsby\") OR title:(\"f\" AND \"scott\" AND \"fitzgerald\" AND \"the\" AND \"great\")",
+        "response": {
+          "numFound": 157092,
+          "start": 0,
+          "numFoundExact": true,
+          "num_found": 157092,
+          "documentation_url": "https://openlibrary.org/dev/docs/api/search",
+          "q": "title:(\"great\" AND \"gatsby\") OR title:(\"the\" AND \"great\" AND \"gatsby\") OR title:(\"the\" AND \"great\") OR title:(\"f\" AND \"scott\") OR title:(\"f\" AND \"scott\" AND \"fitzgerald\" AND \"the\" AND \"great\" AND \"gatsby\") OR title:(\"f\" AND \"scott\" AND \"fitzgerald\" AND \"the\" AND \"great\")",
+          "offset": null,
+          "docs": [
+            {
+              "author_key": [
+                "OL27349A"
+              ],
+              "author_name": [
+                "F. Scott Fitzgerald"
+              ],
+              "cover_i": 10590366,
+              "edition_count": 1181,
+              "key": "/works/OL468431W",
+              "title": "The Great Gatsby",
+              "editions": {
+                "numFound": 995,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "F. Scott Fitzgerald. the Great Gatsby",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL27349A"
+              ],
+              "author_name": [
+                "F. Scott Fitzgerald"
+              ],
+              "cover_i": 14314120,
+              "edition_count": 14,
+              "key": "/works/OL34381078W",
+              "title": "Great Gatsby",
+              "editions": {
+                "numFound": 14,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The Great Gatsby",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL391951A"
+              ],
+              "author_name": [
+                "Morris Dickstein"
+              ],
+              "cover_i": 9439720,
+              "edition_count": 2,
+              "key": "/works/OL18557078W",
+              "title": "The great Gatsby, by F. Scott Fitzgerald",
+              "editions": {
+                "numFound": 2,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The great Gatsby, by F. Scott Fitzgerald",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL2676111A"
+              ],
+              "author_name": [
+                "John W. Campbell"
+              ],
+              "cover_i": 6800270,
+              "edition_count": 2,
+              "key": "/works/OL15712935W",
+              "title": "F. Scott Fitzgerald's the great Gatsby",
+              "editions": {
+                "numFound": 2,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "F. Scott Fitzgerald's the great Gatsby",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL492827A"
+              ],
+              "author_name": [
+                "Nicolas Tredell"
+              ],
+              "cover_i": 144614,
+              "edition_count": 1,
+              "key": "/works/OL16500768W",
+              "title": "F. Scott Fitzgerald",
+              "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "F. Scott Fitzgerald",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL27349A"
+              ],
+              "author_name": [
+                "F. Scott Fitzgerald"
+              ],
+              "cover_i": 7152019,
+              "edition_count": 495,
+              "key": "/works/OL468362W",
+              "title": "The Beautiful and Damned",
+              "editions": {
+                "numFound": 8,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Beautiful and the Damned",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL33461A"
+              ],
+              "author_name": [
+                "Claudia Johnson"
+              ],
+              "cover_i": 2561825,
+              "edition_count": 2,
+              "key": "/works/OL503942W",
+              "title": "Class Conflict in F. Scott Fitzgerald's the Great Gatsby (Social Issues in Literature)",
+              "editions": {
+                "numFound": 2,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Class Conflict in F. Scott Fitzgerald's the Great Gatsby (Social Issues in Literature)",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL27349A"
+              ],
+              "author_name": [
+                "F. Scott Fitzgerald"
+              ],
+              "cover_i": 5412044,
+              "edition_count": 63,
+              "key": "/works/OL468451W",
+              "title": "The last tycoon",
+              "editions": {
+                "numFound": 4,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The Last Tycoon",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL592411A"
+              ],
+              "author_name": [
+                "Mary Dillard"
+              ],
+              "cover_i": 673927,
+              "edition_count": 2,
+              "key": "/works/OL3533265W",
+              "title": "F. Scott Fitzgerald's The great Gatsby",
+              "editions": {
+                "numFound": 2,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "F. Scott Fitzgerald's The great Gatsby",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL27349A"
+              ],
+              "author_name": [
+                "F. Scott Fitzgerald"
+              ],
+              "cover_i": 14914291,
+              "edition_count": 16,
+              "key": "/works/OL41590391W",
+              "title": "Great Gatsby",
+              "editions": {
+                "numFound": 16,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The Great Gatsby",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL3700957A"
+              ],
+              "author_name": [
+                "Spark Publishing"
+              ],
+              "cover_i": 8432032,
+              "edition_count": 1,
+              "key": "/works/OL18196385W",
+              "title": "The great Gatsby, F. Scott Fitzgerald",
+              "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The great Gatsby, F. Scott Fitzgerald",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL2964716A"
+              ],
+              "author_name": [
+                "SparkNotes"
+              ],
+              "cover_i": 8759116,
+              "edition_count": 1,
+              "key": "/works/OL14937405W",
+              "title": "The Great Gatsby",
+              "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Spark Notes The Great Gatsby",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL12375174A"
+              ],
+              "author_name": [
+                "F. Fitzgerald"
+              ],
+              "edition_count": 16,
+              "key": "/works/OL31356497W",
+              "title": "The great Gatsby",
+              "editions": {
+                "numFound": 16,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The Great Gatsby"
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL12375174A"
+              ],
+              "author_name": [
+                "F. Fitzgerald"
+              ],
+              "edition_count": 11,
+              "key": "/works/OL41356393W",
+              "title": "Great Gatsby",
+              "editions": {
+                "numFound": 11,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The Great Gatsby"
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL2661252A"
+              ],
+              "author_name": [
+                "Matthew Joseph Bruccoli"
+              ],
+              "cover_i": 12134147,
+              "edition_count": 1,
+              "key": "/works/OL18325485W",
+              "title": "F. Scott Fitzgerald's The great Gatsby",
+              "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "F. Scott Fitzgerald's The great Gatsby",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL27349A"
+              ],
+              "author_name": [
+                "F. Scott Fitzgerald"
+              ],
+              "edition_count": 64,
+              "key": "/works/OL37629951W",
+              "title": "Great Gatsby",
+              "editions": {
+                "numFound": 64,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Great Gatsby",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL13019167A",
+                "OL27349A"
+              ],
+              "author_name": [
+                "Conrad firstchild",
+                "F. Scott Fitzgerald"
+              ],
+              "cover_i": 14972790,
+              "edition_count": 5,
+              "key": "/works/OL36116740W",
+              "title": "Great Gatsby",
+              "editions": {
+                "numFound": 5,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The Great Gatsby",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL1075495A"
+              ],
+              "author_name": [
+                "Anthony S. Abbott"
+              ],
+              "cover_i": 601883,
+              "edition_count": 2,
+              "key": "/works/OL4977851W",
+              "title": "F. Scott Fitzgerald's The great Gatsby",
+              "editions": {
+                "numFound": 2,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "F. Scott Fitzgerald's The great Gatsby",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL27349A"
+              ],
+              "author_name": [
+                "F. Scott Fitzgerald"
+              ],
+              "cover_i": 8759177,
+              "edition_count": 6,
+              "key": "/works/OL468557W",
+              "title": "Three Novels of F. Scott Fitzgerald (Great Gatsby / Last Tycoon / Tender is the Night)",
+              "editions": {
+                "numFound": 5,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Three Novels by F. Scott Fitzgerald",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL2661252A"
+              ],
+              "author_name": [
+                "Matthew Joseph Bruccoli"
+              ],
+              "cover_i": 543182,
+              "edition_count": 1,
+              "key": "/works/OL18248868W",
+              "title": "F. Scott Fitzgerald's The great Gatsby",
+              "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "F. Scott Fitzgerald's The great Gatsby",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL1960102A"
+              ],
+              "author_name": [
+                "Andrew T. Crosland"
+              ],
+              "cover_i": 4468381,
+              "edition_count": 3,
+              "key": "/works/OL7006574W",
+              "title": "A concordance to F. Scott Fitzgerald's The great Gatsby",
+              "editions": {
+                "numFound": 3,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "A concordance to F. Scott Fitzgerald's The great Gatsby",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL29809A"
+              ],
+              "author_name": [
+                "Harold Bloom"
+              ],
+              "edition_count": 1,
+              "key": "/works/OL15192550W",
+              "title": "F. Scott Fitzgerald's The great Gatsby",
+              "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "F. Scott Fitzgerald's The great Gatsby",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL1653259A"
+              ],
+              "author_name": [
+                "Prentice-Hall, inc."
+              ],
+              "cover_i": 12867642,
+              "edition_count": 1,
+              "key": "/works/OL28758579W",
+              "title": "The great Gatsby, F. Scott Fitzgerald",
+              "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The great Gatsby, F. Scott Fitzgerald",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL29809A"
+              ],
+              "author_name": [
+                "Harold Bloom"
+              ],
+              "cover_i": 4739278,
+              "edition_count": 1,
+              "key": "/works/OL18304861W",
+              "title": "F. Scott Fitzgerald's The great Gatsby",
+              "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "F. Scott Fitzgerald's The great Gatsby",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "web-pride-table-paddle",
+    "provenance": "Open Library search responses captured 2026-11-24; OCR from visually reviewed benchmark photo. Homer alias below is a separate test fixture.",
+    "expectedTitle": "Pride and Prejudice",
+    "expectedAuthor": "Jane Austen",
+    "lines": [
+      {
+        "text": "Jane",
+        "confidence": 98.44714403152466,
+        "top": 0.073125,
+        "height": 0.165625,
+        "left": 0.476875
+      },
+      {
+        "text": "PRIDE",
+        "confidence": 99.615877866745,
+        "top": 0.083125,
+        "height": 0.1275,
+        "left": 0.210625
+      },
+      {
+        "text": "V209 45c",
+        "confidence": 93.70660781860352,
+        "top": 0.0875,
+        "height": 0.024375,
+        "left": 0.619375
+      },
+      {
+        "text": "AND Austen",
+        "confidence": 93.62961649894714,
+        "top": 0.1975,
+        "height": 0.150625,
+        "left": 0.1875
+      },
+      {
+        "text": "PREJUDICE",
+        "confidence": 97.45845794677734,
+        "top": 0.3325,
+        "height": 0.145625,
+        "left": 0.185625
+      },
+      {
+        "text": "A WASHINGTON SQUARE PRESS BOOK",
+        "confidence": 99.8687744140625,
+        "top": 0.8725,
+        "height": 0.04,
+        "left": 0.345625
+      }
+    ],
+    "responses": [
+      {
+        "query": "title:(\"and\" AND \"austen\") OR title:(\"and\" AND \"austen\" AND \"prejudice\") OR title:(\"jane\" AND \"pride\") OR title:(\"and\" AND \"austen\" AND \"prejudice\" AND \"a\" AND \"washington\" AND \"square\" AND \"press\" AND \"book\") OR title:(\"prejudice\" AND \"a\" AND \"washington\" AND \"square\" AND \"press\" AND \"book\") OR title:(\"a\" AND \"washington\" AND \"square\" AND \"press\" AND \"book\")",
+        "response": {
+          "numFound": 1525,
+          "start": 0,
+          "numFoundExact": true,
+          "num_found": 1525,
+          "documentation_url": "https://openlibrary.org/dev/docs/api/search",
+          "q": "title:(\"and\" AND \"austen\") OR title:(\"and\" AND \"austen\" AND \"prejudice\") OR title:(\"jane\" AND \"pride\") OR title:(\"and\" AND \"austen\" AND \"prejudice\" AND \"a\" AND \"washington\" AND \"square\" AND \"press\" AND \"book\") OR title:(\"prejudice\" AND \"a\" AND \"washington\" AND \"square\" AND \"press\" AND \"book\") OR title:(\"a\" AND \"washington\" AND \"square\" AND \"press\" AND \"book\")",
+          "offset": null,
+          "docs": [
+            {
+              "author_key": [
+                "OL21594A"
+              ],
+              "author_name": [
+                "Jane Austen"
+              ],
+              "cover_i": 14348537,
+              "edition_count": 4042,
+              "key": "/works/OL66554W",
+              "title": "Pride and Prejudice",
+              "editions": {
+                "numFound": 284,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The Novels of Jane Austen: Volume II",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL21594A"
+              ],
+              "author_name": [
+                "Jane Austen"
+              ],
+              "cover_i": 13148521,
+              "edition_count": 132,
+              "key": "/works/OL15165350W",
+              "title": "Pride and Prejudice",
+              "editions": {
+                "numFound": 8,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Pride and Prejudice",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL21594A"
+              ],
+              "author_name": [
+                "Jane Austen"
+              ],
+              "cover_i": 9278312,
+              "edition_count": 2262,
+              "key": "/works/OL66513W",
+              "title": "Emma",
+              "editions": {
+                "numFound": 2,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Jane Austen",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL21594A"
+              ],
+              "author_name": [
+                "Jane Austen"
+              ],
+              "cover_i": 9278292,
+              "edition_count": 2091,
+              "key": "/works/OL66562W",
+              "title": "Sense and Sensibility",
+              "editions": {
+                "numFound": 73,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Novels of Jane Austen",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL21594A"
+              ],
+              "author_name": [
+                "Jane Austen"
+              ],
+              "cover_i": 12567961,
+              "edition_count": 1014,
+              "key": "/works/OL66534W",
+              "title": "Northanger Abbey",
+              "editions": {
+                "numFound": 9,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "THE NOVELS AND LETTERS OF JANE AUSTEN",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL21594A"
+              ],
+              "author_name": [
+                "Jane Austen"
+              ],
+              "cover_i": 9276728,
+              "edition_count": 75,
+              "key": "/works/OL66512W",
+              "title": "Novels (Emma / Mansfield Park / Northanger Abbey / Persuasion / Pride and Prejudice / Sense and Sensibility)",
+              "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The great novels of Jane Austen",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL21594A"
+              ],
+              "author_name": [
+                "Jane Austen"
+              ],
+              "cover_i": 9277892,
+              "edition_count": 31,
+              "key": "/works/OL66542W",
+              "title": "Novels (Emma / Lady Susan / Mansfield Park / Northanger Abbey / Persuasion / Pride and Prejudice / Sense and Sensibility)",
+              "editions": {
+                "numFound": 2,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The Complete Novels of Jane Austen",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL21594A"
+              ],
+              "author_name": [
+                "Jane Austen"
+              ],
+              "cover_i": 12728748,
+              "edition_count": 28,
+              "key": "/works/OL66597W",
+              "title": "Novels (Pride and Prejudice / Sense and Sensibility)",
+              "editions": {
+                "numFound": 3,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The works of Jane Austen",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL21594A"
+              ],
+              "author_name": [
+                "Jane Austen"
+              ],
+              "cover_i": 9277764,
+              "edition_count": 12,
+              "key": "/works/OL66518W",
+              "title": "Novels (Emma / Pride and Prejudice / Sense and Sensibility)",
+              "editions": {
+                "numFound": 3,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The Works of Jane Austen",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL13072925A"
+              ],
+              "author_name": [
+                "Jane Jane"
+              ],
+              "edition_count": 1,
+              "key": "/works/OL41675083W",
+              "title": "PRIDE and PREJUDICE by Jane Austen",
+              "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "PRIDE and PREJUDICE by Jane Austen",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL21594A",
+                "OL9855685A"
+              ],
+              "author_name": [
+                "Jane Austen",
+                "L. Oulton"
+              ],
+              "cover_i": 9279171,
+              "edition_count": 62,
+              "key": "/works/OL66613W",
+              "title": "The Watsons",
+              "editions": {
+                "numFound": 4,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The Watsons",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL2516619A",
+                "OL9220446A",
+                "OL9220447A",
+                "OL9288156A",
+                "OL3698354A",
+                "OL9297879A"
+              ],
+              "author_name": [
+                "Mrs. Steele MacKaye",
+                "STEELE MACKAYE",
+                "Mary Keith Medbery MacKaye",
+                "Mrs. Steele Mackaye",
+                "Steele Mackaye",
+                "Mary Keith Medbery Mackaye"
+              ],
+              "cover_i": 9277753,
+              "edition_count": 15,
+              "key": "/works/OL235881W",
+              "title": "Pride and Prejudice, A Play",
+              "editions": {
+                "numFound": 10,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Pride and Prejudice",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL21594A"
+              ],
+              "author_name": [
+                "Jane Austen"
+              ],
+              "cover_i": 12824691,
+              "edition_count": 1237,
+              "key": "/works/OL66544W",
+              "title": "Persuasion",
+              "editions": {
+                "numFound": 6,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "THE NOVELS AND LETTERS OF JANE AUSTEN",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL21594A"
+              ],
+              "author_name": [
+                "Jane Austen"
+              ],
+              "cover_i": 12603142,
+              "edition_count": 12,
+              "key": "/works/OL27025377W",
+              "title": "Pride and Prejudice [1/2]",
+              "editions": {
+                "numFound": 8,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The Novels of Jane Austen",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL2461300A"
+              ],
+              "author_name": [
+                "Diana Birchall"
+              ],
+              "cover_i": 952050,
+              "edition_count": 4,
+              "key": "/works/OL221280W",
+              "title": "Mrs. Darcy's Dilemma",
+              "editions": {
+                "numFound": 2,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Mrs Darcy's Dilemma",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL21594A"
+              ],
+              "author_name": [
+                "Jane Austen"
+              ],
+              "cover_i": 12648559,
+              "edition_count": 2,
+              "key": "/works/OL66524W",
+              "title": "Pride and Prejudice",
+              "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Jane Austen's Pride and prejudice",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL22263A",
+                "OL2725979A",
+                "OL1385446A",
+                "OL1452473A"
+              ],
+              "author_name": [
+                "Mary Balogh",
+                "Colleen Gleason",
+                "Susan Krinard",
+                "Janet Mullany"
+              ],
+              "cover_i": 6597613,
+              "edition_count": 4,
+              "key": "/works/OL15383377W",
+              "title": "Bespelling Jane Austen",
+              "editions": {
+                "numFound": 4,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Bespelling Jane Austen",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL7983295A",
+                "OL1387954A",
+                "OL21594A"
+              ],
+              "author_name": [
+                "Églantine Ceulemans",
+                "Narinder Dhami",
+                "Jane Austen"
+              ],
+              "cover_i": 12411937,
+              "edition_count": 10,
+              "key": "/works/OL25060065W",
+              "title": "Awesomely Austen - Illustrated and Retold",
+              "editions": {
+                "numFound": 10,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Awesomely Austen - Illustrated and Retold",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL21594A"
+              ],
+              "author_name": [
+                "Jane Austen"
+              ],
+              "edition_count": 13,
+              "key": "/works/OL66601W",
+              "title": "THE NOVELS AND LETTERS OF JANE AUSTEN (Emma / Lady Susan / Letters / Mansfield Park / Northanger Abbey / Persuasion / Pride and Prejudice / Sense and Sensibility / Watsons)",
+              "editions": {
+                "numFound": 13,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The novels and letters of Jane Austen",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL21594A"
+              ],
+              "author_name": [
+                "Jane Austen"
+              ],
+              "cover_i": 9277885,
+              "edition_count": 5,
+              "key": "/works/OL15080031W",
+              "title": "Novels (Emma / Persuasion / Pride and Prejudice / Sense and Sensibility)",
+              "editions": {
+                "numFound": 2,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The Works of Jane Austen",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL3771427A"
+              ],
+              "author_name": [
+                "Regina Jeffers"
+              ],
+              "cover_i": 7519125,
+              "edition_count": 1,
+              "key": "/works/OL17408155W",
+              "title": "Darcys Temptation A Sequel To Jane Austens Pride And Prejudice",
+              "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Darcys Temptation A Sequel To Jane Austens Pride And Prejudice"
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL29809A"
+              ],
+              "author_name": [
+                "Harold Bloom"
+              ],
+              "cover_i": 4169797,
+              "edition_count": 1,
+              "key": "/works/OL17018227W",
+              "title": "Jane Austen's Pride and prejudice",
+              "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Jane Austen's Pride and prejudice",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL21594A"
+              ],
+              "author_name": [
+                "Jane Austen"
+              ],
+              "cover_i": 13802231,
+              "edition_count": 10,
+              "key": "/works/OL20646987W",
+              "title": "Pride and Prejudice [2/2]",
+              "editions": {
+                "numFound": 8,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The Novels of Jane Austen",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL6839997A"
+              ],
+              "author_name": [
+                "Claudia Durst Johnson"
+              ],
+              "cover_i": 8220586,
+              "edition_count": 1,
+              "key": "/works/OL17904328W",
+              "title": "Issues of class in Jane Austen's Pride and prejudice",
+              "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Issues of class in Jane Austen's Pride and prejudice",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "catalog-2-paddle",
+    "provenance": "Open Library search responses captured 2026-11-24; OCR from visually reviewed benchmark photo. Homer alias below is a separate test fixture.",
+    "expectedTitle": "Jane Eyre",
+    "expectedAuthor": "Charlotte Brontë",
+    "lines": [
+      {
+        "text": "CHARLOTTE BRONTE",
+        "confidence": 99.8416543006897,
+        "top": 0.754375,
+        "height": 0.0425,
+        "left": 0.19061032863849764
+      },
+      {
+        "text": "JANE EYRE",
+        "confidence": 99.91178512573242,
+        "top": 0.820625,
+        "height": 0.045,
+        "left": 0.3267605633802817
+      },
+      {
+        "text": "READINGNCLASGICS",
+        "confidence": 87.28024363517761,
+        "top": 0.9,
+        "height": 0.03125,
+        "left": 0.3408450704225352
+      }
+    ],
+    "responses": [
+      {
+        "query": "title:(\"jane\" AND \"eyre\") OR title:(\"charlotte\" AND \"bronte\" AND \"jane\" AND \"eyre\") OR title:(\"charlotte\" AND \"bronte\") OR title:(\"charlotte\" AND \"bronte\" AND \"jane\" AND \"eyre\" AND \"readingnclasgics\") OR title:(\"jane\" AND \"eyre\" AND \"readingnclasgics\") OR title:(\"readingnclasgics\")",
+        "response": {
+          "numFound": 2016,
+          "start": 0,
+          "numFoundExact": true,
+          "num_found": 2016,
+          "documentation_url": "https://openlibrary.org/dev/docs/api/search",
+          "q": "title:(\"jane\" AND \"eyre\") OR title:(\"charlotte\" AND \"bronte\" AND \"jane\" AND \"eyre\") OR title:(\"charlotte\" AND \"bronte\") OR title:(\"charlotte\" AND \"bronte\" AND \"jane\" AND \"eyre\" AND \"readingnclasgics\") OR title:(\"jane\" AND \"eyre\" AND \"readingnclasgics\") OR title:(\"readingnclasgics\")",
+          "offset": null,
+          "docs": [
+            {
+              "author_key": [
+                "OL113362A"
+              ],
+              "author_name": [
+                "Charlotte Brontë"
+              ],
+              "cover_i": 8235363,
+              "edition_count": 1170,
+              "key": "/works/OL1095427W",
+              "title": "Jane Eyre",
+              "editions": {
+                "numFound": 1162,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Jane Eyre",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL113828A"
+              ],
+              "author_name": [
+                "Elizabeth Cleghorn Gaskell"
+              ],
+              "cover_i": 2748823,
+              "edition_count": 125,
+              "key": "/works/OL1103197W",
+              "title": "The Life of Charlotte Bronte",
+              "editions": {
+                "numFound": 125,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The Life of Charlotte Brontë: Author of 'Jane Eyre, ' 'Shirley, ' 'Villette, ' 'The Professor ..."
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL113362A"
+              ],
+              "author_name": [
+                "Charlotte Brontë"
+              ],
+              "cover_i": 11024634,
+              "edition_count": 536,
+              "key": "/works/OL1095397W",
+              "title": "Shirley",
+              "editions": {
+                "numFound": 21,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Shirley / Charlotte Brontë",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL113362A"
+              ],
+              "author_name": [
+                "Charlotte Brontë"
+              ],
+              "edition_count": 24,
+              "key": "/works/OL30590598W",
+              "title": "Jane Eyre by Charlotte Bronte",
+              "editions": {
+                "numFound": 24,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Jane Eyre by Charlotte Bronte",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL113362A"
+              ],
+              "author_name": [
+                "Charlotte Brontë"
+              ],
+              "cover_i": 13863728,
+              "edition_count": 35,
+              "key": "/works/OL28877695W",
+              "title": "Jane Eyre",
+              "editions": {
+                "numFound": 35,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Jane Eyre",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL113362A",
+                "OL2893604A",
+                "OL11758663A",
+                "OL11758664A"
+              ],
+              "author_name": [
+                "Charlotte Brontë",
+                "Edmund H. Garrett",
+                "Edmund Morrison Wimperis",
+                "Jant van der Weg-Laverman"
+              ],
+              "edition_count": 38,
+              "key": "/works/OL32417366W",
+              "title": "Jane Eyre",
+              "editions": {
+                "numFound": 38,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Jane Eyre",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL342487A",
+                "OL113362A",
+                "OL24529A"
+              ],
+              "author_name": [
+                "Anne Brontë",
+                "Charlotte Brontë",
+                "Emily Brontë"
+              ],
+              "cover_i": 9285805,
+              "edition_count": 12,
+              "key": "/works/OL1095378W",
+              "title": "Novels (Jane Eyre / Tenant of Wildfell Hall / Wuthering Heights)",
+              "editions": {
+                "numFound": 5,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Jane Eyre / Charlotte Brontë. Wuthering Heights / Emily Brontë. The tenant of Wildfell Hall / Anne Brontë.",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL1393212A",
+                "OL3128414A",
+                "OL13536830A"
+              ],
+              "author_name": [
+                "Jasper Fforde",
+                "Roxane Azimi",
+                "Jasper Fforde"
+              ],
+              "cover_i": 2401550,
+              "edition_count": 32,
+              "key": "/works/OL5730195W",
+              "title": "The Eyre Affair",
+              "editions": {
+                "numFound": 5,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "L'affaire Jane Eyre (Thursday Next vol. 1)"
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL7391692A"
+              ],
+              "author_name": [
+                "J. L. Niemann"
+              ],
+              "cover_i": 8021962,
+              "edition_count": 2,
+              "key": "/works/OL17741843W",
+              "title": "Rochester",
+              "editions": {
+                "numFound": 2,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Rochester",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL113362A"
+              ],
+              "author_name": [
+                "Charlotte Brontë"
+              ],
+              "edition_count": 34,
+              "key": "/works/OL28935078W",
+              "title": "Jane Eyre",
+              "editions": {
+                "numFound": 34,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Jane Eyre",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL113362A",
+                "OL24529A"
+              ],
+              "author_name": [
+                "Charlotte Brontë",
+                "Emily Brontë"
+              ],
+              "cover_i": 14839209,
+              "edition_count": 9,
+              "key": "/works/OL14949561W",
+              "title": "Novels (Jane Eyre / Professor / Shirley / Villette / Wuthering Heights)",
+              "editions": {
+                "numFound": 6,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The Complete Novels of Charlotte & Emily Brontë",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL113362A",
+                "OL7997299A"
+              ],
+              "author_name": [
+                "Charlotte Brontë",
+                "M. Dolors Ventós Navés"
+              ],
+              "cover_i": 13958979,
+              "edition_count": 30,
+              "key": "/works/OL35001033W",
+              "title": "Jane Eyre",
+              "editions": {
+                "numFound": 30,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Jane Eyre",
+                    "language": [
+                      "fre"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL113362A",
+                "OL24529A"
+              ],
+              "author_name": [
+                "Charlotte Brontë",
+                "Emily Brontë"
+              ],
+              "cover_i": 14543383,
+              "edition_count": 13,
+              "key": "/works/OL1095380W",
+              "title": "Novels (Jane Eyre / Wuthering Heights)",
+              "editions": {
+                "numFound": 13,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Works of Charlotte and Emily Bronte",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL113362A"
+              ],
+              "author_name": [
+                "Charlotte Brontë"
+              ],
+              "edition_count": 12,
+              "key": "/works/OL25598877W",
+              "title": "Jane Eyre by Charlotte Bronte",
+              "editions": {
+                "numFound": 12,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Jane Eyre by Charlotte Bronte",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL113362A"
+              ],
+              "author_name": [
+                "Charlotte Brontë"
+              ],
+              "edition_count": 15,
+              "key": "/works/OL41670736W",
+              "title": "Jane Eyre",
+              "editions": {
+                "numFound": 15,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Jane Eyre",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL113362A"
+              ],
+              "author_name": [
+                "Charlotte Brontë"
+              ],
+              "edition_count": 11,
+              "key": "/works/OL30590515W",
+              "title": "Jane Eyre by Charlotte Brontë",
+              "editions": {
+                "numFound": 11,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Jane Eyre by Charlotte Brontë",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL113362A"
+              ],
+              "author_name": [
+                "Charlotte Brontë"
+              ],
+              "edition_count": 11,
+              "key": "/works/OL40167499W",
+              "title": "Jane Eyre",
+              "editions": {
+                "numFound": 11,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Jane Eyre",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL29809A"
+              ],
+              "author_name": [
+                "Harold Bloom"
+              ],
+              "cover_i": 10609708,
+              "edition_count": 3,
+              "key": "/works/OL18947576W",
+              "title": "Charlotte Brontë's Jane Eyre",
+              "editions": {
+                "numFound": 3,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Charlotte Brontë's Jane Eyre",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL113362A",
+                "OL1765051A"
+              ],
+              "author_name": [
+                "Charlotte Brontë",
+                "Naunerle C. Farr"
+              ],
+              "cover_i": 14751355,
+              "edition_count": 558,
+              "key": "/works/OL37840844W",
+              "title": "Jane Eyre",
+              "editions": {
+                "numFound": 558,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Jane Eyre",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL113362A"
+              ],
+              "author_name": [
+                "Charlotte Brontë"
+              ],
+              "edition_count": 1,
+              "key": "/works/OL27231334W",
+              "title": "Jane Eyre - Charlotte Bronte",
+              "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Jane Eyre - Charlotte Bronte",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL113362A"
+              ],
+              "author_name": [
+                "Charlotte Brontë"
+              ],
+              "edition_count": 9,
+              "key": "/works/OL28861852W",
+              "title": "Jane Eyre",
+              "editions": {
+                "numFound": 9,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Jane Eyre",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL709848A"
+              ],
+              "author_name": [
+                "Elsie B. Michie"
+              ],
+              "cover_i": 126835,
+              "edition_count": 3,
+              "key": "/works/OL3902634W",
+              "title": "Charlotte Bronte's Jane Eyre",
+              "editions": {
+                "numFound": 3,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Charlotte Brontë's Jane Eyre",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL6133409A"
+              ],
+              "author_name": [
+                "Jörg Rublack"
+              ],
+              "edition_count": 2,
+              "key": "/works/OL13226604W",
+              "title": "Charlotte Brontë, \"Jane Eyre\"",
+              "editions": {
+                "numFound": 2,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Charlotte Brontë \"Jane Eyre\"",
+                    "language": [
+                      "ger",
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL2964716A",
+                "OL113362A"
+              ],
+              "author_name": [
+                "SparkNotes",
+                "Charlotte Brontë"
+              ],
+              "cover_i": 10770819,
+              "edition_count": 2,
+              "key": "/works/OL24274115W",
+              "title": "Jane Eyre, Charlotte Brontë",
+              "editions": {
+                "numFound": 2,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Jane Eyre, Charlotte Brontë",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "web-dune-hand-paddle",
+    "provenance": "Open Library search responses captured 2026-11-24; OCR from visually reviewed benchmark photo. Homer alias below is a separate test fixture.",
+    "expectedTitle": "Dune",
+    "expectedAuthor": "Frank Herbert",
+    "lines": [
+      {
+        "text": "DUNE",
+        "confidence": 99.83774423599243,
+        "top": 0.14375,
+        "height": 0.136875,
+        "left": 0.434375
+      },
+      {
+        "text": "Seinc Sitin' Sp M",
+        "confidence": 54.9121618270874,
+        "top": 0.178125,
+        "height": 0.1,
+        "left": 0.293125
+      },
+      {
+        "text": "FRANK",
+        "confidence": 99.97600317001343,
+        "top": 0.774375,
+        "height": 0.11375,
+        "left": 0.34125
+      },
+      {
+        "text": "HERBERT",
+        "confidence": 99.97364282608032,
+        "top": 0.839375,
+        "height": 0.118125,
+        "left": 0.315625
+      }
+    ],
+    "responses": [
+      {
+        "query": "title:(\"dune\" AND \"frank\" AND \"herbert\") OR title:(\"frank\" AND \"herbert\") OR title:(\"dune\" AND \"frank\") OR title:(\"dune\") OR title:(\"herbert\") OR title:(\"frank\")",
+        "response": {
+          "numFound": 70260,
+          "start": 0,
+          "numFoundExact": true,
+          "num_found": 70260,
+          "documentation_url": "https://openlibrary.org/dev/docs/api/search",
+          "q": "title:(\"dune\" AND \"frank\" AND \"herbert\") OR title:(\"frank\" AND \"herbert\") OR title:(\"dune\" AND \"frank\") OR title:(\"dune\") OR title:(\"herbert\") OR title:(\"frank\")",
+          "offset": null,
+          "docs": [
+            {
+              "author_key": [
+                "OL79034A"
+              ],
+              "author_name": [
+                "Frank Herbert"
+              ],
+              "cover_i": 11481354,
+              "edition_count": 155,
+              "key": "/works/OL893414W",
+              "title": "Dune",
+              "editions": {
+                "numFound": 141,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Dune (Dune by Frank Herbert, Narrated by George Guidall)",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL79034A"
+              ],
+              "author_name": [
+                "Frank Herbert"
+              ],
+              "cover_i": 6976407,
+              "edition_count": 77,
+              "key": "/works/OL893516W",
+              "title": "Children of Dune",
+              "editions": {
+                "numFound": 68,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Dzieci Diuny - Frank Herbert, Wojciech Siudmak [KSIÄĹťKA]",
+                    "language": [
+                      "pol"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL79034A"
+              ],
+              "author_name": [
+                "Frank Herbert"
+              ],
+              "cover_i": 284530,
+              "edition_count": 48,
+              "key": "/works/OL893502W",
+              "title": "Heretics of Dune",
+              "editions": {
+                "numFound": 44,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Heretics of Dune 10cc [Paperback]  by Herbert, Frank",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL79034A"
+              ],
+              "author_name": [
+                "Frank Herbert"
+              ],
+              "cover_i": 379932,
+              "edition_count": 15,
+              "key": "/works/OL893444W",
+              "title": "Dune, Dune Messiah, Children of Dune",
+              "editions": {
+                "numFound": 15,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Frank Herbert's Dune Saga 3-Book Boxed Set",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL1194290A"
+              ],
+              "author_name": [
+                "Brian Herbert"
+              ],
+              "cover_i": 8303140,
+              "edition_count": 2,
+              "key": "/works/OL5275512W",
+              "title": "Dreamer of Dune",
+              "editions": {
+                "numFound": 2,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Dreamer of Dune",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL79034A"
+              ],
+              "author_name": [
+                "Frank Herbert"
+              ],
+              "cover_i": 13790987,
+              "edition_count": 10,
+              "key": "/works/OL893407W",
+              "title": "Dune Complete Series, 6 Books",
+              "editions": {
+                "numFound": 9,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Frank Herbert's Dune Saga Collection",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL2701677A"
+              ],
+              "author_name": [
+                "Willis E. McNelly"
+              ],
+              "cover_i": 9995768,
+              "edition_count": 2,
+              "key": "/works/OL8108423W",
+              "title": "The Dune Encyclopedia",
+              "editions": {
+                "numFound": 2,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The Dune Encyclopedia",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL79034A"
+              ],
+              "author_name": [
+                "Frank Herbert"
+              ],
+              "cover_i": 476763,
+              "edition_count": 10,
+              "key": "/works/OL893506W",
+              "title": "Eye",
+              "editions": {
+                "numFound": 2,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "FRANK HERBERT EYE",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL79034A"
+              ],
+              "author_name": [
+                "Frank Herbert"
+              ],
+              "cover_i": 4627593,
+              "edition_count": 10,
+              "key": "/works/OL893504W",
+              "title": "The worlds of Frank Herbert",
+              "editions": {
+                "numFound": 10,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The worlds of Frank Herbert.",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL394489A",
+                "OL2820887A"
+              ],
+              "author_name": [
+                "James Van Hise",
+                "Michael D. Messina"
+              ],
+              "cover_i": 475886,
+              "edition_count": 1,
+              "key": "/works/OL18167310W",
+              "title": "The secrets of Frank Herbert's Dune",
+              "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The Secrets Of Frank Herbert'S Dune",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL79034A"
+              ],
+              "author_name": [
+                "Frank Herbert"
+              ],
+              "edition_count": 2,
+              "key": "/works/OL893472W",
+              "title": "The notebooks of Frank Herbert's Dune",
+              "editions": {
+                "numFound": 2,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The notebooks of Frank Herbert's Dune",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL3878618A"
+              ],
+              "author_name": [
+                "Kevin R. Grazier"
+              ],
+              "cover_i": 3063134,
+              "edition_count": 3,
+              "key": "/works/OL9896628W",
+              "title": "The Science of Dune",
+              "editions": {
+                "numFound": 3,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The science of Dune",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL79034A"
+              ],
+              "author_name": [
+                "Frank Herbert"
+              ],
+              "cover_i": 980253,
+              "edition_count": 101,
+              "key": "/works/OL893461W",
+              "title": "Dune Messiah",
+              "editions": {
+                "numFound": 88,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Dune Messiah",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL79034A"
+              ],
+              "author_name": [
+                "Frank Herbert"
+              ],
+              "cover_i": 4627589,
+              "edition_count": 7,
+              "key": "/works/OL893505W",
+              "title": "The Book of Frank Herbert",
+              "editions": {
+                "numFound": 6,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The Book of Frank Herbert",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL446842A"
+              ],
+              "author_name": [
+                "Anne Frank"
+              ],
+              "cover_i": 8584021,
+              "edition_count": 294,
+              "key": "/works/OL266178W",
+              "title": "Het Achterhuis",
+              "editions": {
+                "numFound": 171,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "安妮日记",
+                    "language": [
+                      "chi",
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL79034A"
+              ],
+              "author_name": [
+                "Frank Herbert"
+              ],
+              "cover_i": 8440308,
+              "edition_count": 1,
+              "key": "/works/OL893476W",
+              "title": "Songs of Muad'dib",
+              "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Songs of Muad'dib",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL9932385A"
+              ],
+              "author_name": [
+                "Kara Kennedy"
+              ],
+              "edition_count": 1,
+              "key": "/works/OL28627734W",
+              "title": "Frank Herbert's Dune",
+              "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Frank Herbert's Dune",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "edition_count": 2,
+              "key": "/works/OL17850698W",
+              "title": "Dune by Frank Herbert [Chilton, 1965]",
+              "editions": {
+                "numFound": 2,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Dune by Frank Herbert [Chilton, 1965]"
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL79034A"
+              ],
+              "author_name": [
+                "Frank Herbert"
+              ],
+              "cover_i": 6711531,
+              "edition_count": 47,
+              "key": "/works/OL893515W",
+              "title": "God Emperor of Dune",
+              "editions": {
+                "numFound": 42,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "God Emperor of Dune (Dune Chronicles, Book 4)",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL79034A"
+              ],
+              "author_name": [
+                "Frank Herbert"
+              ],
+              "cover_i": 5536140,
+              "edition_count": 43,
+              "key": "/works/OL893508W",
+              "title": "Chapterhouse Dune",
+              "editions": {
+                "numFound": 35,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Chapterhouse, Dune",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL3309374A"
+              ],
+              "author_name": [
+                "Eric Chapman"
+              ],
+              "edition_count": 1,
+              "key": "/works/OL27220181W",
+              "title": "SUMMARY of DUNE by Frank Herbert",
+              "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "SUMMARY of DUNE by Frank Herbert",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL1194290A"
+              ],
+              "author_name": [
+                "Brian Herbert"
+              ],
+              "cover_i": 10538275,
+              "edition_count": 1,
+              "key": "/works/OL24140861W",
+              "title": "Frank Herbert's Dune",
+              "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Frank Herbert's Dune : la novela gráfica. Libro 1"
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL657578A"
+              ],
+              "author_name": [
+                "Harold Lee Prosser"
+              ],
+              "edition_count": 2,
+              "key": "/works/OL3745326W",
+              "title": "Frank Herbert",
+              "editions": {
+                "numFound": 2,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Frank Herbert",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL79034A"
+              ],
+              "author_name": [
+                "Frank Herbert"
+              ],
+              "edition_count": 1,
+              "key": "/works/OL28740670W",
+              "title": "Frank Herbert's Dune Saga 3-Book Deluxe Hardcover Boxed Set",
+              "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Frank Herbert's Dune Saga 3-Book Deluxe Hardcover Boxed Set",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "saved-book-120-tesseract",
+    "provenance": "Open Library search responses captured 2026-11-24; OCR from visually reviewed benchmark photo. Homer alias below is a separate test fixture.",
+    "expectedTitle": "The Odyssey",
+    "expectedAuthor": "Homer",
+    "lines": [
+      {
+        "text": "=",
+        "height": 0.013125,
+        "top": 0.045625,
+        "confidence": 56
+      },
+      {
+        "text": "“x",
+        "height": 0.03625,
+        "top": 0.1475,
+        "confidence": 53
+      },
+      {
+        "text": "I",
+        "height": 0.025625,
+        "top": 0.189375,
+        "confidence": 54
+      },
+      {
+        "text": "Homer",
+        "height": 0.055625,
+        "top": 0.288125,
+        "confidence": 96
+      },
+      {
+        "text": "J",
+        "height": 0.0475,
+        "top": 0.310625,
+        "confidence": 60
+      },
+      {
+        "text": "7",
+        "height": 0.025625,
+        "top": 0.400625,
+        "confidence": 60
+      },
+      {
+        "text": "The",
+        "height": 0.044375,
+        "top": 0.45625,
+        "confidence": 96
+      },
+      {
+        "text": "Lint",
+        "height": 0.03125,
+        "top": 0.469375,
+        "confidence": 53
+      },
+      {
+        "text": "0d",
+        "height": 0.09375,
+        "top": 0.488125,
+        "confidence": 95
+      },
+      {
+        "text": "SER",
+        "height": 0.043125,
+        "top": 0.64625,
+        "confidence": 59
+      },
+      {
+        "text": "SN",
+        "height": 0.01125,
+        "top": 0.73,
+        "confidence": 50
+      },
+      {
+        "text": "> 4",
+        "height": 0.01125,
+        "top": 0.746875,
+        "confidence": 55
+      },
+      {
+        "text": "(=",
+        "height": 0.055625,
+        "top": 0.863125,
+        "confidence": 50
+      },
+      {
+        "text": "S",
+        "height": 0.0125,
+        "top": 0.929375,
+        "confidence": 71
+      },
+      {
+        "text": "(CLASSICS",
+        "height": 0.0175,
+        "top": 0.92625,
+        "confidence": 73
+      },
+      {
+        "text": "== = READING!",
+        "height": 0.02875,
+        "top": 0.92625,
+        "confidence": 74
+      },
+      {
+        "text": "—",
+        "height": 0.01,
+        "top": 0.971875,
+        "confidence": 56
+      },
+      {
+        "text": "&= - AQ",
+        "height": 0.090625,
+        "top": 0.19875,
+        "confidence": 50
+      },
+      {
+        "text": "Homer",
+        "height": 0.0525,
+        "top": 0.288125,
+        "confidence": 94
+      },
+      {
+        "text": "J",
+        "height": 0.048125,
+        "top": 0.310625,
+        "confidence": 62
+      },
+      {
+        "text": "7 1",
+        "height": 0.030625,
+        "top": 0.33375,
+        "confidence": 50
+      },
+      {
+        "text": "The",
+        "height": 0.044375,
+        "top": 0.45625,
+        "confidence": 96
+      },
+      {
+        "text": "Odyssey",
+        "height": 0.120625,
+        "top": 0.484375,
+        "confidence": 86
+      },
+      {
+        "text": "0d",
+        "height": 0.09375,
+        "top": 0.488125,
+        "confidence": 95
+      },
+      {
+        "text": "MM",
+        "height": 0.033125,
+        "top": 0.884375,
+        "confidence": 51
+      },
+      {
+        "text": "READINGS CLASSICS",
+        "height": 0.0425,
+        "top": 0.91375,
+        "confidence": 73
+      },
+      {
+        "text": "— Oo",
+        "height": 0.009375,
+        "top": 0.9725,
+        "confidence": 53
+      }
+    ],
+    "responses": [
+      {
+        "query": "title:(\"odyssey\" AND \"0d\") OR title:(\"homer\" AND \"the\" AND \"odyssey\" AND \"0d\") OR title:(\"homer\" AND \"the\" AND \"odyssey\") OR title:(\"the\" AND \"odyssey\" AND \"0d\") OR title:(\"the\" AND \"odyssey\") OR title:(\"homer\" AND \"the\")",
+        "response": {
+          "numFound": 7681,
+          "start": 0,
+          "numFoundExact": true,
+          "num_found": 7681,
+          "documentation_url": "https://openlibrary.org/dev/docs/api/search",
+          "q": "title:(\"odyssey\" AND \"0d\") OR title:(\"homer\" AND \"the\" AND \"odyssey\" AND \"0d\") OR title:(\"homer\" AND \"the\" AND \"odyssey\") OR title:(\"the\" AND \"odyssey\" AND \"0d\") OR title:(\"the\" AND \"odyssey\") OR title:(\"homer\" AND \"the\")",
+          "offset": null,
+          "docs": [
+            {
+              "author_key": [
+                "OL18404A"
+              ],
+              "author_name": [
+                "Ὅμηρος"
+              ],
+              "cover_i": 9045853,
+              "edition_count": 1067,
+              "key": "/works/OL61982W",
+              "title": "Ὀδύσσεια",
+              "editions": {
+                "numFound": 594,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The Odyssey of Homer",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL18404A"
+              ],
+              "author_name": [
+                "Ὅμηρος"
+              ],
+              "cover_i": 7083790,
+              "edition_count": 1084,
+              "key": "/works/OL61981W",
+              "title": "Ἰλιάς",
+              "editions": {
+                "numFound": 343,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The Iliad and Odyssey of Homer.",
+                    "language": [
+                      "eng",
+                      "grc"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL2383781A",
+                "OL9178984A"
+              ],
+              "author_name": [
+                "W. Lucas Collins",
+                "Homer Odyssey English"
+              ],
+              "cover_i": 6089166,
+              "edition_count": 29,
+              "key": "/works/OL12818091W",
+              "title": "Homer",
+              "editions": {
+                "numFound": 25,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Homer",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL333917A"
+              ],
+              "author_name": [
+                "Simon Armitage"
+              ],
+              "cover_i": 2412831,
+              "edition_count": 2,
+              "key": "/works/OL2423198W",
+              "title": "The odyssey",
+              "editions": {
+                "numFound": 2,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The odyssey",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL41426A"
+              ],
+              "author_name": [
+                "W. H. D. Rouse"
+              ],
+              "cover_i": 6513036,
+              "edition_count": 1,
+              "key": "/works/OL15142235W",
+              "title": "Homer, The Odyssey",
+              "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Homer, The Odyssey",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL552170A"
+              ],
+              "author_name": [
+                "Barbara Leonie Picard"
+              ],
+              "cover_i": 117377,
+              "edition_count": 4,
+              "key": "/works/OL3381639W",
+              "title": "The Odyssey of Homer",
+              "editions": {
+                "numFound": 4,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The Odyssey of Homer",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL18404A"
+              ],
+              "author_name": [
+                "Ὅμηρος"
+              ],
+              "cover_i": 8491545,
+              "edition_count": 29,
+              "key": "/works/OL61971W",
+              "title": "Opera",
+              "editions": {
+                "numFound": 10,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Homer's Epics",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL2630986A"
+              ],
+              "author_name": [
+                "Richmond Lattimore"
+              ],
+              "cover_i": 4943225,
+              "edition_count": 2,
+              "key": "/works/OL276907W",
+              "title": "The Odyssey of Homer (P.S.)",
+              "editions": {
+                "numFound": 2,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The Odyssey of Homer (P.S.)",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL559117A"
+              ],
+              "author_name": [
+                "Jasper Griffin"
+              ],
+              "cover_i": 4115329,
+              "edition_count": 2,
+              "key": "/works/OL3407743W",
+              "title": "Homer, The Odyssey",
+              "editions": {
+                "numFound": 2,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Homer, The Odyssey",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL2623461A"
+              ],
+              "author_name": [
+                "Arthur C. Clarke"
+              ],
+              "cover_i": 11344400,
+              "edition_count": 117,
+              "key": "/works/OL17365W",
+              "title": "2001",
+              "editions": {
+                "numFound": 4,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "2001, a space odyssey",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL18404A",
+                "OL2526947A"
+              ],
+              "author_name": [
+                "Όμηρος",
+                "Robert Fitzgerald"
+              ],
+              "cover_i": 14920914,
+              "edition_count": 22,
+              "key": "/works/OL29364585W",
+              "title": "Odyssey",
+              "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The Odyssey",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL1514288A"
+              ],
+              "author_name": [
+                "Stanley P. Baldwin"
+              ],
+              "cover_i": 523007,
+              "edition_count": 6,
+              "key": "/works/OL6027876W",
+              "title": "CliffsNotes on Homer's The Odyssey",
+              "editions": {
+                "numFound": 6,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "CliffsNotes on Homer's The Odyssey",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL18404A"
+              ],
+              "author_name": [
+                "Όμηρος"
+              ],
+              "cover_i": 9298084,
+              "edition_count": 3,
+              "key": "/works/OL20653017W",
+              "title": "The Odyssey of Homer",
+              "editions": {
+                "numFound": 2,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The Odyssey of Homer",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL18404A"
+              ],
+              "author_name": [
+                "Όμηρος"
+              ],
+              "cover_i": 13489194,
+              "edition_count": 240,
+              "key": "/works/OL26784440W",
+              "title": "Odyssey",
+              "editions": {
+                "numFound": 2,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The Odyssey (Classics Illustrated)",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL1168432A"
+              ],
+              "author_name": [
+                "Alfred John Church"
+              ],
+              "cover_i": 5611954,
+              "edition_count": 43,
+              "key": "/works/OL5215811W",
+              "title": "The Odyssey of Homer",
+              "editions": {
+                "numFound": 27,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The Odyssey of Homer",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL29809A"
+              ],
+              "author_name": [
+                "Harold Bloom"
+              ],
+              "cover_i": 4119122,
+              "edition_count": 1,
+              "key": "/works/OL18200996W",
+              "title": "Homer's the Odyssey",
+              "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Homer's the Odyssey",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL2383781A"
+              ],
+              "author_name": [
+                "W. Lucas Collins"
+              ],
+              "cover_i": 5586855,
+              "edition_count": 5,
+              "key": "/works/OL7705531W",
+              "title": "Homer",
+              "editions": {
+                "numFound": 5,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Homer.",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL2623461A"
+              ],
+              "author_name": [
+                "Arthur C. Clarke"
+              ],
+              "cover_i": 207047,
+              "edition_count": 31,
+              "key": "/works/OL17409W",
+              "title": "3001",
+              "editions": {
+                "numFound": 15,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "3001",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL18404A"
+              ],
+              "author_name": [
+                "Όμηρος"
+              ],
+              "edition_count": 11,
+              "key": "/works/OL39468160W",
+              "title": "The Odyssey of Homer",
+              "editions": {
+                "numFound": 4,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The Odyssey of Homer",
+                    "language": [
+                      "eng",
+                      "grc"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL18404A"
+              ],
+              "author_name": [
+                "Όμηρος"
+              ],
+              "cover_i": 14538246,
+              "edition_count": 5,
+              "key": "/works/OL33566219W",
+              "title": "The Odyssey of Homer",
+              "editions": {
+                "numFound": 3,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The Odyssey of Homer",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL2658787A",
+                "OL14429932A"
+              ],
+              "author_name": [
+                "Samuel Butler",
+                "Jim Tinsley"
+              ],
+              "edition_count": 1,
+              "key": "/works/OL40351683W",
+              "title": "Odyssey by Homer",
+              "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Odyssey by Homer",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL559117A"
+              ],
+              "author_name": [
+                "Jasper Griffin"
+              ],
+              "cover_i": 4334318,
+              "edition_count": 5,
+              "key": "/works/OL3407753W",
+              "title": "Homer",
+              "editions": {
+                "numFound": 2,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Homer",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL18404A",
+                "OL1388850A"
+              ],
+              "author_name": [
+                "Ὅμηρος",
+                "Emily R. Wilson"
+              ],
+              "cover_i": 8100018,
+              "edition_count": 20,
+              "key": "/works/OL17812254W",
+              "title": "The Odyssey",
+              "editions": {
+                "numFound": 2,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The Odyssey",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL559117A"
+              ],
+              "author_name": [
+                "Jasper Griffin"
+              ],
+              "edition_count": 6,
+              "key": "/works/OL18473237W",
+              "title": "Homer",
+              "editions": {
+                "numFound": 5,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Homer",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "fahrenheit-author-label",
+    "provenance": "Captured stronger-recognizer OCR and Open Library responses, 2026-11-24; edition author appended to canonical title.",
+    "expectedTitle": "Fahrenheit 451",
+    "expectedAuthor": "Ray Bradbury",
+    "lines": [
+      {
+        "text": "HE CLASSIC BESTSELLER ABOUT CENSORSHIP",
+        "confidence": 95.24415731430054,
+        "top": 0.098125,
+        "height": 0.03125,
+        "left": 0.30125
+      },
+      {
+        "text": "MOREIMPORTANTNOWTHANEVERBEFORE",
+        "confidence": 99.31665062904358,
+        "top": 0.1325,
+        "height": 0.025,
+        "left": 0.304375
+      },
+      {
+        "text": "Fahrenheit",
+        "confidence": 99.40129518508911,
+        "top": 0.2,
+        "height": 0.14625,
+        "left": 0.278125
+      },
+      {
+        "text": "451",
+        "confidence": 98.8126277923584,
+        "top": 0.32,
+        "height": 0.13125,
+        "left": 0.283125
+      },
+      {
+        "text": "THE TEMPERATURE AT WHICHBOOKS BURN",
+        "confidence": 94.64704990386963,
+        "top": 0.4425,
+        "height": 0.02625,
+        "left": 0.2925
+      },
+      {
+        "text": "The novel of",
+        "confidence": 98.16319942474365,
+        "top": 0.476875,
+        "height": 0.025625,
+        "left": 0.29125
+      },
+      {
+        "text": "firemen who",
+        "confidence": 96.10439538955688,
+        "top": 0.49875,
+        "height": 0.025625,
+        "left": 0.29125
+      },
+      {
+        "text": "are paid to set",
+        "confidence": 97.87696599960327,
+        "top": 0.523125,
+        "height": 0.020625,
+        "left": 0.2925
+      },
+      {
+        "text": "books ablaze",
+        "confidence": 98.4567403793335,
+        "top": 0.54375,
+        "height": 0.024375,
+        "left": 0.290625
+      },
+      {
+        "text": "Ray",
+        "confidence": 96.78214192390442,
+        "top": 0.635,
+        "height": 0.1575,
+        "left": 0.27125
+      },
+      {
+        "text": "Bradbury",
+        "confidence": 92.08953976631165,
+        "top": 0.743125,
+        "height": 0.179375,
+        "left": 0.26625
+      }
+    ],
+    "responses": [
+      {
+        "query": "title:(\"ray\" AND \"bradbury\") OR title:(\"fahrenheit\" AND \"451\") OR title:(\"he\" AND \"classic\" AND \"bestseller\" AND \"about\" AND \"censorship\") OR title:(\"fahrenheit\" AND \"451\" AND \"the\" AND \"temperature\" AND \"at\" AND \"whichbooks\" AND \"burn\") OR title:(\"451\" AND \"the\" AND \"temperature\" AND \"at\" AND \"whichbooks\" AND \"burn\") OR title:(\"the\" AND \"temperature\" AND \"at\" AND \"whichbooks\" AND \"burn\")",
+        "response": {
+          "numFound": 315,
+          "start": 0,
+          "numFoundExact": true,
+          "num_found": 315,
+          "documentation_url": "https://openlibrary.org/dev/docs/api/search",
+          "q": "title:(\"ray\" AND \"bradbury\") OR title:(\"fahrenheit\" AND \"451\") OR title:(\"he\" AND \"classic\" AND \"bestseller\" AND \"about\" AND \"censorship\") OR title:(\"fahrenheit\" AND \"451\" AND \"the\" AND \"temperature\" AND \"at\" AND \"whichbooks\" AND \"burn\") OR title:(\"451\" AND \"the\" AND \"temperature\" AND \"at\" AND \"whichbooks\" AND \"burn\") OR title:(\"the\" AND \"temperature\" AND \"at\" AND \"whichbooks\" AND \"burn\")",
+          "offset": null,
+          "docs": [
+            {
+              "author_key": [
+                "OL24137A"
+              ],
+              "author_name": [
+                "Ray Bradbury"
+              ],
+              "cover_i": 12993656,
+              "edition_count": 266,
+              "key": "/works/OL103123W",
+              "title": "Fahrenheit 451",
+              "editions": {
+                "numFound": 257,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Fahrenheit 451 Ray Bradbury",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL3519429A"
+              ],
+              "author_name": [
+                "Coles Editorial Board"
+              ],
+              "cover_i": 10651642,
+              "edition_count": 1,
+              "key": "/works/OL17850405W",
+              "title": "Ray Bradbury",
+              "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Ray Bradbury",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL29809A"
+              ],
+              "author_name": [
+                "Harold Bloom"
+              ],
+              "cover_i": 5389889,
+              "edition_count": 2,
+              "key": "/works/OL16667658W",
+              "title": "Ray Bradbury's Fahrenheit 451",
+              "editions": {
+                "numFound": 2,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Ray Bradbury's Fahrenheit 451",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL577540A"
+              ],
+              "author_name": [
+                "Tim Hamilton"
+              ],
+              "cover_i": 12852555,
+              "edition_count": 5,
+              "key": "/works/OL3465657W",
+              "title": "Ray Bradbury's Fahrenheit 451",
+              "editions": {
+                "numFound": 5,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Ray Bradbury's Fahrenheit 451",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL24137A"
+              ],
+              "author_name": [
+                "Ray Bradbury"
+              ],
+              "cover_i": 12818806,
+              "edition_count": 4,
+              "key": "/works/OL28185143W",
+              "title": "Fahrenheit 451 (Fahrenheit 451 / Playground / Rock Cried Out)",
+              "editions": {
+                "numFound": 4,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Fahrenheit 451",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL29809A"
+              ],
+              "author_name": [
+                "Harold Bloom"
+              ],
+              "cover_i": 9906246,
+              "edition_count": 1,
+              "key": "/works/OL16667749W",
+              "title": "Ray Bradbury's Fahrenheit 451",
+              "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Ray Bradbury's Fahrenheit 451",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL591379A"
+              ],
+              "author_name": [
+                "Philip Burnham"
+              ],
+              "cover_i": 9504919,
+              "edition_count": 1,
+              "key": "/works/OL16866094W",
+              "title": "Ray Bradbury's Fahrenheit 451",
+              "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Ray Bradbury's Fahrenheit 451",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL24137A"
+              ],
+              "author_name": [
+                "Ray Bradbury"
+              ],
+              "cover_i": 9349726,
+              "edition_count": 3,
+              "key": "/works/OL14925909W",
+              "title": "The veldt",
+              "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Ray Bradbury Collection",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL29809A"
+              ],
+              "author_name": [
+                "Harold Bloom"
+              ],
+              "cover_i": 555580,
+              "edition_count": 1,
+              "key": "/works/OL16667165W",
+              "title": "Ray Bradbury's Fahrenheit 451",
+              "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Ray Bradbury's Fahrenheit 451",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL225268A",
+                "OL1758415A",
+                "OL24137A",
+                "OL7841568A",
+                "OL26237A",
+                "OL1657273A",
+                "OL190479A",
+                "OL19731A",
+                "OL1232071A",
+                "OL3108350A",
+                "OL2786980A",
+                "OL3299617A",
+                "OL3087993A",
+                "OL710234A",
+                "OL28760A",
+                "OL3329768A",
+                "OL32471A",
+                "OL79008A",
+                "OL586545A",
+                "OL32436A",
+                "OL231796A",
+                "OL25161A"
+              ],
+              "author_name": [
+                "William F. Nolan",
+                "Martin H. Greenberg",
+                "Ray Bradbury",
+                "Cameron Nolan",
+                "Edward Gorman",
+                "James Kisner",
+                "Charles L. Grant",
+                "Richard Matheson",
+                "Chad Oliver",
+                "William, Jr. Relling",
+                "Charles Beaumont",
+                "Norman Corwin",
+                "Roberta Lannes",
+                "Richard Christian Matheson",
+                "Chelsea Quinn Yarbro",
+                "Bruce Francis",
+                "Gregory Benford",
+                "John Maclay",
+                "J. N. Williamson",
+                "F. Paul Wilson",
+                "Robert Sheckley",
+                "Orson Scott Card"
+              ],
+              "cover_i": 8303632,
+              "edition_count": 8,
+              "key": "/works/OL14925684W",
+              "title": "The Bradbury Chronicles",
+              "editions": {
+                "numFound": 8,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The Bradbury chronicles",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL2964716A"
+              ],
+              "author_name": [
+                "SparkNotes"
+              ],
+              "cover_i": 8225482,
+              "edition_count": 2,
+              "key": "/works/OL17271853W",
+              "title": "Fahrenheit 451",
+              "editions": {
+                "numFound": 2,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Fahrenheit 451",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL24137A"
+              ],
+              "author_name": [
+                "Ray Bradbury"
+              ],
+              "cover_i": 15265557,
+              "edition_count": 4,
+              "key": "/works/OL39527276W",
+              "title": "Fahrenheit 451",
+              "editions": {
+                "numFound": 4,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Fahrenheit 451",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL24137A"
+              ],
+              "author_name": [
+                "Ray Bradbury"
+              ],
+              "cover_i": 12775454,
+              "edition_count": 1,
+              "key": "/works/OL14925855W",
+              "title": "The Novels of Ray Bradbury (Dandelion Wine / Fahrenheit 451 / Something Wicked This Way Comes)",
+              "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The Novels of Ray Bradbury"
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL24137A"
+              ],
+              "author_name": [
+                "Ray Bradbury"
+              ],
+              "cover_i": 9346500,
+              "edition_count": 5,
+              "key": "/works/OL103171W",
+              "title": "The vintage Bradbury",
+              "editions": {
+                "numFound": 3,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The vintage Bradbury",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL24137A"
+              ],
+              "author_name": [
+                "Ray Bradbury"
+              ],
+              "cover_i": 4673341,
+              "edition_count": 8,
+              "key": "/works/OL14925863W",
+              "title": "Ray Bradbury Chronicles. 2/7",
+              "editions": {
+                "numFound": 8,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Ray Bradbury Chronicles (Ray Bradbury Chronicles)",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL24137A"
+              ],
+              "author_name": [
+                "Ray Bradbury"
+              ],
+              "cover_i": 9346347,
+              "edition_count": 7,
+              "key": "/works/OL103174W",
+              "title": "The Stories of Ray Bradbury",
+              "editions": {
+                "numFound": 6,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "The stories of Ray Bradbury",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL24137A"
+              ],
+              "author_name": [
+                "Ray Bradbury"
+              ],
+              "cover_i": 14831327,
+              "edition_count": 61,
+              "key": "/works/OL103118W",
+              "title": "Dandelion Wine",
+              "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Dandelion wine",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL24137A"
+              ],
+              "author_name": [
+                "Ray Bradbury"
+              ],
+              "cover_i": 12387598,
+              "edition_count": 2,
+              "key": "/works/OL25635788W",
+              "title": "Fahrenheit 451",
+              "editions": {
+                "numFound": 2,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Fahrenheit 451",
+                    "language": [
+                      "spa"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL7524581A"
+              ],
+              "author_name": [
+                "Annie Spence"
+              ],
+              "cover_i": 14456877,
+              "edition_count": 7,
+              "key": "/works/OL19717925W",
+              "title": "Dear Fahrenheit 451",
+              "editions": {
+                "numFound": 7,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Dear Fahrenheit 451",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL3470922A"
+              ],
+              "author_name": [
+                "Candice Mancini"
+              ],
+              "cover_i": 12547967,
+              "edition_count": 1,
+              "key": "/works/OL16668097W",
+              "title": "Censorship in Ray Bradbury's Fahrenheit 451",
+              "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Censorship in Ray Bradbury's Fahrenheit 451",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL2464864A"
+              ],
+              "author_name": [
+                "Kristi Hiner"
+              ],
+              "cover_i": 9257574,
+              "edition_count": 3,
+              "key": "/works/OL7799576W",
+              "title": "Bradbury's Fahrenheit 451",
+              "editions": {
+                "numFound": 3,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "CliffsNotes Bradbury's Fahrenheit 451",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL2165013A"
+              ],
+              "author_name": [
+                "Joseph Blakey"
+              ],
+              "edition_count": 2,
+              "key": "/works/OL158150W",
+              "title": "Fahrenheit 451",
+              "editions": {
+                "numFound": 2,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Fahrenheit 451",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL3296811A"
+              ],
+              "author_name": [
+                "Samuel J. Umland"
+              ],
+              "cover_i": 6635649,
+              "edition_count": 2,
+              "key": "/works/OL9238833W",
+              "title": "Fahrenheit 451",
+              "editions": {
+                "numFound": 2,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "Fahrenheit 451",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "author_key": [
+                "OL24137A"
+              ],
+              "author_name": [
+                "Ray Bradbury"
+              ],
+              "cover_i": 9345353,
+              "edition_count": 5,
+              "key": "/works/OL17376456W",
+              "title": "A Pleasure To Burn",
+              "editions": {
+                "numFound": 4,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                  {
+                    "title": "A Pleasure To Burn",
+                    "language": [
+                      "eng"
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+]

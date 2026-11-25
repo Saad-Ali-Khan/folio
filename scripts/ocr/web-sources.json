@@ -1,0 +1,183 @@
+[
+  {
+    "id": "web-gatsby-desk",
+    "expectedTitle": "The Great Gatsby",
+    "expectedAuthor": "F. Scott Fitzgerald",
+    "source": "https://www.carousell.ph/p/the-great-gatsby-by-f-scott-fitzgerald-papermill-edition-1336142823/",
+    "imageUrl": "https://media.karousell.com/media/photos/products/2024/11/13/the_great_gatsby_by_f_scott_fi_1731536700_5e4413bd.jpg",
+    "group": "web-photo",
+    "labelStatus": "pending-visual-review"
+  },
+  {
+    "id": "web-gatsby-window",
+    "expectedTitle": "The Great Gatsby",
+    "expectedAuthor": "F. Scott Fitzgerald",
+    "source": "https://berrybookishsisters.com/products/the-great-gatsby-by-f-scott-fitzgerald",
+    "imageUrl": "https://berrybookishsisters.com/cdn/shop/files/TheGreatGatsby.jpg?v=1757274974",
+    "group": "web-photo",
+    "labelStatus": "pending-visual-review"
+  },
+  {
+    "id": "web-pride-table",
+    "expectedTitle": "Pride and Prejudice",
+    "expectedAuthor": "Jane Austen",
+    "source": "https://pangobooks.com/books/a2188d9c-b083-457c-9f4b-e8242ae8ffd2-XSQLX7YimbYotixzn326pZwxNQB3",
+    "imageUrl": "https://images.pangobooks.com/book_images/XSQLX7YimbYotixzn326pZwxNQB3/951b9eea-0e69-49c9-a06f-7133b4c38934_1080x1080?crop=1%3A1&quality=85&width=1200",
+    "group": "web-photo",
+    "labelStatus": "pending-visual-review"
+  },
+  {
+    "id": "web-pride-hand",
+    "expectedTitle": "Pride and Prejudice",
+    "expectedAuthor": "Jane Austen",
+    "source": "https://shopee.tw/product/63838893/40907986970",
+    "imageUrl": "https://down-tw.img.susercontent.com/file/tw-11134207-7ra0n-mc0d8z9jfmt51b",
+    "group": "web-photo",
+    "labelStatus": "pending-visual-review"
+  },
+  {
+    "id": "web-orwell-table",
+    "expectedTitle": "1984",
+    "expectedTitleAliases": ["Nineteen Eighty-Four"],
+    "expectedAuthor": "George Orwell",
+    "source": "https://www.carousell.com.my/p/new-george-orwell-1984-nineteen-eighty-four-gilded-pocket-edition-1415227189/",
+    "imageUrl": "https://media.karousell.com/media/photos/products/2026/1/12/new__george_orwell_1984_ninete_1768243572_2c74b94a.jpg",
+    "group": "web-photo",
+    "labelStatus": "pending-visual-review"
+  },
+  {
+    "id": "web-mockingbird-hand",
+    "expectedTitle": "To Kill a Mockingbird",
+    "expectedAuthor": "Harper Lee",
+    "source": "https://www.carousell.ph/p/to-kill-a-mockingbird-by-harper-lee-vintage-classics-edition-1299192754/",
+    "imageUrl": "https://media.karousell.com/media/photos/products/2024/4/20/to_kill_a_mockingbird_by_harpe_1713604493_4cab42af_progressive.jpg",
+    "group": "web-photo",
+    "labelStatus": "pending-visual-review"
+  },
+  {
+    "id": "web-mockingbird-worn",
+    "expectedTitle": "To Kill a Mockingbird",
+    "expectedAuthor": "Harper Lee",
+    "source": "https://www.ricardo.ch/de/a/harper-lee-to-kill-a-mockingbird-50th-ed-rare%21-1308614894/",
+    "imageUrl": "https://img.ricardostatic.ch/images/1c6820b8-d504-49a2-bb2e-8ec2eba2c9b2/t_1800x1350/harper-lee-to-kill-a-mockingbird-50th-ed-rare",
+    "group": "web-photo",
+    "labelStatus": "pending-visual-review"
+  },
+  {
+    "id": "web-catcher-carousel",
+    "expectedTitle": "The Catcher in the Rye",
+    "expectedAuthor": "J. D. Salinger",
+    "source": "https://www.nypl.org/blog/2019/10/28/holden-caulfield-phonies",
+    "imageUrl": "https://drupal.nypl.org/sites-drupal/default/files/styles/max_width_960/public/blogs/img_8468.jpg?itok=P-YneteK",
+    "group": "web-photo",
+    "labelStatus": "pending-visual-review"
+  },
+  {
+    "id": "web-catcher-vintage",
+    "expectedTitle": "The Catcher in the Rye",
+    "expectedAuthor": "J. D. Salinger",
+    "source": "https://torijonesstudio.com/products/j-d-salinger-the-catcher-in-the-rye",
+    "imageUrl": "https://torijonesstudio.com/cdn/shop/products/2136_ToriJones_266FORWEB_1800x1800.jpg?v=1636567571",
+    "group": "web-photo",
+    "labelStatus": "pending-visual-review"
+  },
+  {
+    "id": "web-flies-hand",
+    "expectedTitle": "Lord of the Flies",
+    "expectedAuthor": "William Golding",
+    "source": "https://knihobot.cz/g/242730",
+    "imageUrl": "https://rezised-images.knhbt.cz/1920x1920/75335433.jpg",
+    "group": "web-photo",
+    "labelStatus": "pending-visual-review"
+  },
+  {
+    "id": "web-flies-art",
+    "expectedTitle": "Lord of the Flies",
+    "expectedAuthor": "William Golding",
+    "source": "https://www.kupindo.com/Klasici/83673529_William-Golding-LORD-OF-THE-FLIES",
+    "imageUrl": "https://static.kupindoslike.com/William-Golding-LORD-OF-THE-FLIES_slika_XL_171070649.jpg",
+    "group": "web-photo",
+    "labelStatus": "pending-visual-review"
+  },
+  {
+    "id": "web-fahrenheit-hand",
+    "expectedTitle": "Fahrenheit 451",
+    "expectedAuthor": "Ray Bradbury",
+    "source": "https://bookbot.com/g/3721059",
+    "imageUrl": "https://rezised-images.knhbt.cz/1920x1920/78063049.webp",
+    "group": "web-photo",
+    "labelStatus": "pending-visual-review"
+  },
+  {
+    "id": "web-fahrenheit-worn",
+    "expectedTitle": "Fahrenheit 451",
+    "expectedAuthor": "Ray Bradbury",
+    "source": "https://postmarkedfromthestars.com/products/fahrenheit-451-ray-bradbury-1976-ballantine-paperback-edition-donna-diamond-cover-art",
+    "imageUrl": "https://postmarkedfromthestars.com/cdn/shop/products/image_0f4ae4b4-692b-407c-b7e0-ccf6307b15c3_grande.jpg?v=1626758755",
+    "group": "web-photo",
+    "labelStatus": "pending-visual-review"
+  },
+  {
+    "id": "web-old-man-hand",
+    "expectedTitle": "The Old Man and the Sea",
+    "expectedAuthor": "Ernest Hemingway",
+    "source": "https://bookbot.com/g/7946627",
+    "imageUrl": "https://rezised-images.knhbt.cz/1920x1920/81750508.jpg",
+    "group": "web-photo",
+    "labelStatus": "pending-visual-review"
+  },
+  {
+    "id": "web-old-man-brick",
+    "expectedTitle": "The Old Man and the Sea",
+    "expectedAuthor": "Ernest Hemingway",
+    "source": "https://postmarkedfromthestars.com/products/copy-of-the-old-man-and-the-sea-ernest-hemingway-1980-scribner-classics-hardback",
+    "imageUrl": "https://postmarkedfromthestars.com/cdn/shop/products/20211117_132616_grande.jpg?v=1637173674",
+    "group": "web-photo",
+    "labelStatus": "pending-visual-review"
+  },
+  {
+    "id": "web-siddhartha-outdoors",
+    "expectedTitle": "Siddhartha",
+    "expectedAuthor": "Hermann Hesse",
+    "source": "https://en.rattibha.com/thread/1738456053044441256",
+    "imageUrl": "https://pbs.twimg.com/media/GCA8pTYWkAAOF7O.jpg",
+    "group": "web-photo",
+    "labelStatus": "pending-visual-review"
+  },
+  {
+    "id": "web-siddhartha-shelf",
+    "expectedTitle": "Siddhartha",
+    "expectedAuthor": "Hermann Hesse",
+    "source": "https://en.rattibha.com/thread/1657954176050122753",
+    "imageUrl": "https://pbs.twimg.com/media/FwI9plqXoAMub6k.jpg",
+    "group": "web-photo",
+    "labelStatus": "pending-visual-review"
+  },
+  {
+    "id": "web-alchemist-desert",
+    "expectedTitle": "The Alchemist",
+    "expectedAuthor": "Paulo Coelho",
+    "source": "https://www.theworldthroughbooks.com/post/the-alchemist-by-paulo-coelho",
+    "imageUrl": "https://static.wixstatic.com/media/1741a6_6c83cc3d79e9433ba1b95ace024a084d~mv2.jpg/v1/fill/w_750%2Ch_1000%2Cal_c%2Cq_85%2Cusm_0.66_1.00_0.01/1741a6_6c83cc3d79e9433ba1b95ace024a084d~mv2.jpg",
+    "group": "web-photo",
+    "labelStatus": "pending-visual-review"
+  },
+  {
+    "id": "web-dune-hand",
+    "expectedTitle": "Dune",
+    "expectedAuthor": "Frank Herbert",
+    "source": "https://pangobooks.com/books/262c9c69-0bf7-4520-b43f-0993c98470a9-jAljVxY2uEUcvfqtjxd5Lx0P5HS2",
+    "imageUrl": "https://images2.pangobooks.com/images/668fa62f-d8c9-498d-945f-2ab5bfc90394?auto=webp&crop=1%3A1&format=webp&quality=85&width=800",
+    "group": "web-photo",
+    "labelStatus": "pending-visual-review"
+  },
+  {
+    "id": "web-wuthering-brick",
+    "expectedTitle": "Wuthering Heights",
+    "expectedAuthor": "Emily Brontë",
+    "source": "https://postmarkedfromthestars.com/products/wuthering-heights-by-emily-bronte-1945-barnes-noble-paperback-edition",
+    "imageUrl": "https://postmarkedfromthestars.com/cdn/shop/products/image_8feef7f1-dcf8-4d71-a5fd-7e311949e2f0_grande.jpg?v=1611522816",
+    "group": "web-photo",
+    "labelStatus": "pending-visual-review"
+  }
+]

@@ -4,6 +4,72 @@ import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { StringDecoder } from "node:string_decoder";
 
+export function localControlDenied(error: unknown): boolean {
+  let current=error;
+  for(let depth=0;depth<6&&current&&typeof current==='object';depth++){
+    if('code' in current && ['EACCES','EPERM','LOCAL_CONTROL_DENIED'].includes(String(current.code)))return true;
+    current='cause' in current ? current.cause : undefined;
+  }
+  return false;
+}
+
+/** Recover metadata only after refusal/missing control and proof the owner is dead. */
+export function recoverStoppedControl(controlFile: string, lockFile: string, error: unknown,
+  probe: (pid: number) => void = pid => process.kill(pid, 0)): boolean {
+  if (localControlDenied(error)) return false;
+  let current = error, offline = false;
+  for (let depth = 0; depth < 6 && current && typeof current === "object"; depth++) {
+    if ("code" in current && ["ECONNREFUSED", "ENOENT"].includes(String(current.code))) offline = true;
+    current = "cause" in current ? current.cause : undefined;
+  }
+  if (!offline) return false;
+  if (!existsSync(controlFile)) {
+    if (!existsSync(lockFile)) return true;
+    try {
+      const snapshot = readFileSync(lockFile, "utf8"), owner = JSON.parse(snapshot);
+      if (!Number.isInteger(owner.pid) || owner.pid <= 0 || !owner.nonce) return false;
+      try { probe(owner.pid); return false; }
+      catch (failure) { if ((failure as NodeJS.ErrnoException).code !== "ESRCH") return false; }
+      return !existsSync(controlFile) && readFileSync(lockFile, "utf8") === snapshot;
+    } catch { return false; }
+  }
+  try {
+    const control = readFileSync(controlFile, "utf8"), lock = readFileSync(lockFile, "utf8");
+    const state = JSON.parse(control), owner = JSON.parse(lock);
+    if (!Number.isInteger(owner.pid) || owner.pid <= 0 || !owner.nonce ||
+      state.pid !== undefined && state.pid !== owner.pid || state.nonce !== undefined && state.nonce !== owner.nonce) return false;
+    try { probe(owner.pid); return false; }
+    catch (failure) { if ((failure as NodeJS.ErrnoException).code !== "ESRCH") return false; }
+    if (readFileSync(controlFile, "utf8") !== control || readFileSync(lockFile, "utf8") !== lock) return false;
+    unlinkSync(controlFile); // acquireLock independently recovers the dead lock at startup.
+    return true;
+  } catch { return false; }
+}
+
+export async function waitForLocalStop(controlFile: string, lockFile: string,
+  control: string, lock: string | undefined, timeout = 30_000) {
+  const read = (file: string) => {
+    try { return readFileSync(file, "utf8"); }
+    catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined; throw error; }
+  };
+  const deadline = Date.now() + timeout;
+  while (Date.now() < deadline) {
+    const currentControl = read(controlFile);
+    const currentLock = read(lockFile);
+    if (currentControl === undefined && currentLock === undefined) return;
+    if (currentControl !== undefined && currentControl !== control || currentLock !== undefined && currentLock !== lock) {
+      throw Error("Local supervisor ownership changed during shutdown; inspect status before restarting.");
+    }
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+  throw Error("Local supervisor is still shutting down; no replacement was launched.");
+}
+
+export function setLocalPaused(file: string, paused: boolean) {
+  if(paused){mkdirSync(path.dirname(file),{recursive:true});writeFileSync(file,'Paused by local:stop. Run local:up to resume.\n',{mode:0o600});}
+  else try{unlinkSync(file);}catch(error){if((error as NodeJS.ErrnoException).code!=='ENOENT')throw error;}
+}
+
 export function acquireLock(file: string) {
   mkdirSync(path.dirname(file), { recursive: true });
   const nonce = randomUUID();
@@ -90,7 +156,7 @@ export class LocalService {
     logStream(child.stderr!, this.log);
     child.on("message", message => {
       this.onMessage?.(message);
-      if (message && typeof message === "object" && "type" in message && message.type === "folio-bot-health") {
+      if (message && typeof message === "object" && "type" in message && ["folio-bot-health", "folio-service-health"].includes(String(message.type))) {
         this.lastMessageAt = Date.now();
         this.ready = "ready" in message && message.ready === true;
       }
@@ -118,7 +184,7 @@ export class LocalService {
     const exited = new Promise<void>(resolve => child.once("exit", () => resolve()));
     // Kill only a child created by this instance, including Next/OCR descendants.
     if (process.platform === "win32") {
-      const result = spawnSync("taskkill.exe", ["/PID", String(child.pid), "/T", "/F"], { windowsHide: true });
+      const result = spawnSync("taskkill.exe", ["/PID", String(child.pid), "/T", "/F"], { windowsHide: true, timeout: 5000 });
       if (result.status !== 0 && child.exitCode === null) child.kill();
     } else {
       try { process.kill(-child.pid!, "SIGKILL"); } catch { child.kill("SIGKILL"); }

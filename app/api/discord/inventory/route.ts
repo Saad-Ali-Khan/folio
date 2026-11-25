@@ -1,5 +1,7 @@
 import {queueTitleChoice,resolveTitleChoice} from "@/lib/title-choice";
 import { resolveCoverBarcode } from "@/lib/pending-covers";
+import { queueManualCover } from "@/lib/manual-cover";
+import {previewSuggestedCover} from "@/lib/suggested-cover";
 import { notifyCoverCleanup } from "@/lib/notify-cover-cleanup";
 import { MAX_STOCK_CHOICES, queueStockChoice, resolveStockChoice } from "@/lib/discord-stock-choice";
 import { findBooksByIdentifier, getDb } from "@/lib/db";
@@ -27,9 +29,11 @@ type DiscordCommand = {
   text?: string;
   titleChoice?: { id?: unknown; selection?: unknown };
   coverChoice?: { id?: unknown; selection?: unknown };
+  manualCover?: { id?: unknown; title?: unknown; author?: unknown };
+  suggestionChoice?: {id?:unknown};
 };
 
-const ambiguousTitle = "Multiple editions match. Use the edition’s ISBN or prefix its slug with slug:.";
+const ambiguousTitle = "Multiple listings match. Use id:<listing ID> or slug:<listing slug>.";
 
 function reply(text: string | null) {
   return Response.json({ reply: text });
@@ -71,6 +75,23 @@ export async function POST(request: Request) {
   }
 
   // Button interactions carry the account ID from Discord through the signed bot request.
+  if(body?.suggestionChoice) {
+    const id=body.suggestionChoice.id;
+    if(typeof id!=="string"||!/^[a-f0-9]{10}$/.test(id)||typeof body.userId!=="string")return reply("Invalid catalog suggestion.");
+    try {return Response.json(await previewSuggestedCover(await getDb(),id,body.userId,channelId));}
+    catch {return reply("Could not load this suggestion. No stock was added. Try manual entry or the barcode.");}
+  }
+  if (body?.manualCover) {
+    const { id, title, author } = body.manualCover;
+    if (typeof id !== "string" || !/^[a-f0-9]{20}$/.test(id) || typeof body.userId !== "string") return reply("Invalid manual cover request.");
+    try {
+      const result = await queueManualCover(await getDb(), messageId, channelId, body.userId, id, title, author);
+      await notifyCoverCleanup(result.cleanupAt); return Response.json(result);
+    } catch (error) {
+      return reply(error instanceof Error && /^(Enter a title|Title\/author|This form)/.test(error.message)
+        ? error.message : "Could not prepare this manual draft. No stock was added. Check the saved cover or try again.");
+    }
+  }
   if (body?.coverChoice) {
     const { id, selection } = body.coverChoice;
     if (typeof id !== "string" || !/^[0-9a-f]{10}$/.test(id) || typeof selection !== "string" || typeof body.userId !== "string") return reply("Invalid cover confirmation.");

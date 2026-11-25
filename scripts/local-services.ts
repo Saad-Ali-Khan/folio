@@ -1,28 +1,30 @@
 import { createServer } from "node:http";
 import { randomBytes, timingSafeEqual } from "node:crypto";
-import { mkdirSync, readFileSync, writeFileSync, unlinkSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync, unlinkSync } from "node:fs";
 import { createConnection } from "node:net";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { spawn } from "node:child_process";
-import { acquireLock, createLog, LocalService } from "./local-runtime";
+import { spawn, spawnSync } from "node:child_process";
+import { acquireLock, createLog, LocalService, localControlDenied, setLocalPaused, recoverStoppedControl, waitForLocalStop } from "./local-runtime";
 import { getDb } from "../lib/db";
 import { createCoverCleanupScheduler } from "../lib/cover-cleanup-scheduler";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const runtime = path.join(root, ".folio-local");
 const controlFile = path.join(runtime, "control.json");
+const supervisorLock = path.join(runtime, "supervisor.lock");
 const command = process.argv[2] ?? "start";
 const secret = process.env.INVENTORY_DISCORD_SECRET?.trim();
 const port = 3000;
 
 async function control(action: "status" | "stop") {
   const state = JSON.parse(readFileSync(controlFile, "utf8"));
+  if (!Number.isInteger(state.port) || state.port < 1 || state.port > 65535 || !/^[a-f0-9]{64}$/.test(state.token)) throw Error("Invalid local supervisor control record.");
   const response = await fetch(`http://127.0.0.1:${state.port}/${action}`, {
     method: action === "stop" ? "POST" : "GET", headers: { authorization: `Bearer ${state.token}` },
     signal: AbortSignal.timeout(10_000), redirect: "error",
   });
-  if (!response.ok) throw new Error(`Local service control returned ${response.status}.`);
+  if (!response.ok) throw Object.assign(new Error(`Local service control returned ${response.status}.`), {code:"LOCAL_CONTROL_DENIED"});
   return response.json();
 }
 
@@ -38,20 +40,50 @@ async function occupied() {
 
 async function run() {
   if (command === "status" || command === "stop") {
-    console.log(JSON.stringify(await control(command), null, 2));
+    if (command === "status") { console.log(JSON.stringify(await control(command), null, 2)); return; }
+    setLocalPaused(path.join(runtime, "paused"), true);
+    const beforeControl = existsSync(controlFile) ? readFileSync(controlFile, "utf8") : undefined;
+    const beforeLock = existsSync(supervisorLock) ? readFileSync(supervisorLock, "utf8") : undefined;
+    try {
+      await control("stop");
+    } catch (error) {
+      if (!recoverStoppedControl(controlFile, supervisorLock, error)) throw error;
+      console.log(JSON.stringify({ stopped: true, alreadyStopped: true, staleControlRecovered: beforeControl !== undefined }));
+      return;
+    }
+    await waitForLocalStop(controlFile, supervisorLock, beforeControl!, beforeLock);
+    console.log(JSON.stringify({ stopped: true }));
     return;
   }
   if (command === "up") {
-    try { console.log(JSON.stringify(await control("status"), null, 2)); return; } catch { /* Not running. */ }
+    setLocalPaused(path.join(runtime,'paused'),false);
+    let running=false;
+    try {
+      const state=await control("status");running=true;
+      if(state.api?.ready&&state.bot?.ready){console.log(JSON.stringify(state,null,2));return;}
+    } catch(error) {
+      if(localControlDenied(error))throw new Error("Windows denied access to the local supervisor. Run this command in your own PowerShell session; no duplicate supervisor was launched.");
+    }
+    if(!running && process.platform==='win32'){
+      const task=spawnSync('powershell.exe',['-NoProfile','-NonInteractive','-File',path.join(root,'scripts/start-local-task.ps1')],{cwd:root,windowsHide:true,encoding:'utf8',timeout:15000});
+      if(task.error||task.status!==0)throw new Error("Could not start the Folio Windows task. Run npm run local:install-startup -- -Update, then npm run local:up, in your own PowerShell window.");
+    }else if(!running){
     const child = spawn(process.execPath, ["--env-file-if-exists=.env", "--env-file-if-exists=.env.local", "--import", "tsx", fileURLToPath(import.meta.url), "start"], {
       cwd: root, detached: true, windowsHide: true, stdio: "ignore",
     });
     child.unref();
-    for (let attempt = 0; attempt < 30; attempt++) {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      try { console.log(JSON.stringify(await control("status"), null, 2)); return; } catch { /* Booting. */ }
     }
-    throw new Error("Launcher status could not be reached. Run npm run local:status first; if offline, use npm run local:start to see the error.");
+    const deadline=Date.now()+45_000;
+    let lastState;
+    while(Date.now()<deadline){
+      await new Promise(resolve => setTimeout(resolve, 500));
+      try {
+        lastState=await control("status");
+        if(lastState.api?.ready&&lastState.bot?.ready){console.log(JSON.stringify(lastState,null,2));return;}
+      } catch(error) {if(localControlDenied(error))throw error;}
+    }
+    if(lastState)console.log(JSON.stringify(lastState,null,2));
+    throw new Error("Local services are not ready yet. Keep the Windows task running and inspect npm run local:status and .folio-local/logs/startup.log, api.log and bot.log.");
   }
   if (command !== "start") throw new Error("Use start, up, status, or stop.");
   for (const key of ["DISCORD_BOT_TOKEN", "DISCORD_CHANNEL_ID", "INVENTORY_DISCORD_SECRET", "INVENTORY_DISCORD_PIN", "DATABASE_URL"]) {
@@ -61,15 +93,18 @@ async function run() {
   if (!["localhost", "127.0.0.1"].includes(configured.hostname) || configured.protocol !== "http:" || configured.port !== String(port) || configured.pathname !== "/" || configured.search || configured.username || configured.password) {
     throw new Error("The local launcher requires INVENTORY_API_URL=http://127.0.0.1:3000.");
   }
-  const release = acquireLock(path.join(runtime, "supervisor.lock"));
+  const release = acquireLock(supervisorLock);
+  const owner = JSON.parse(readFileSync(supervisorLock, "utf8"));
   process.once("exit", release);
   if (await occupied()) throw new Error("Port 3000 is already in use. Stop the existing local server first; it has not been changed.");
   const secrets = Object.entries(process.env).filter(([key]) => /SECRET|TOKEN|PIN|PASSWORD|DATABASE_URL|ACCESS_KEY/i.test(key)).map(([, value]) => value ?? "");
   const logger = (name: string) => createLog(path.join(runtime, "logs", `${name}.log`), secrets);
   const log = logger("supervisor");
-  const env = { ...process.env, INVENTORY_API_URL: "http://127.0.0.1:3000" };
+  const paddleEnabled = existsSync(path.join(runtime, "ocr-enabled"));
+  const env = { ...process.env, INVENTORY_API_URL: "http://127.0.0.1:3000", FOLIO_OCR_ENGINE: paddleEnabled ? "paddle" : "tesseract" };
   const api = new LocalService("api", [path.join(root, "node_modules/next/dist/bin/next"), "dev", "--webpack", "--hostname", "127.0.0.1", "--port", String(port)], root, env, logger("api"));
   const bot = new LocalService("bot", ["--import", "tsx", path.join(root, "scripts/discord-bot.ts")], root, env, logger("bot"));
+  const ocr = paddleEnabled ? new LocalService("ocr", ["--import", "tsx", path.join(root, "scripts/ocr/server.ts")], root, env, logger("ocr-service")) : undefined;
   const cleanup = process.env.PHOTO_STORAGE === "r2" ? createCoverCleanupScheduler(getDb, log) : undefined;
   bot.onMessage = message => {
     if(message && typeof message === "object" && "type" in message && message.type === "folio-cover-cleanup" && "at" in message && typeof message.at === "number") cleanup?.schedule(message.at);
@@ -80,7 +115,9 @@ async function run() {
   let botUnreadySince = Date.now();
   let health: unknown = { ready: false, state: "starting" };
   const token = randomBytes(32).toString("hex");
-  const status = () => ({ localOnly: true, api: health, bot: { running: Boolean(bot.child), ready: bot.ready, blocked: bot.blocked, restarts: bot.restarts }, apiRestarts: api.restarts, logs: path.join(runtime, "logs") });
+  const status = () => ({ localOnly: true, api: health, bot: { running: Boolean(bot.child), ready: bot.ready, blocked: bot.blocked, restarts: bot.restarts },
+    ocr: { engine: paddleEnabled ? "paddle-mobile" : "tesseract", ready: ocr?.ready ?? true, degraded: Boolean(ocr && !ocr.ready), restarts: ocr?.restarts ?? 0 },
+    apiRestarts: api.restarts, logs: path.join(runtime, "logs") });
   const server = createServer((req, res) => {
     const supplied = Buffer.from(req.headers.authorization ?? "");
     const expected = Buffer.from(`Bearer ${token}`);
@@ -106,7 +143,7 @@ async function run() {
     stopping = true;
     cleanup?.stop();
     clearInterval(interval);
-    try { await bot.stop(); await api.stop(); }
+    try { await bot.stop(); await api.stop(); await ocr?.stop(); }
     catch (error) { log(String(error)); process.exitCode = 1; }
     server.close();
     try { unlinkSync(controlFile); } catch { /* Already removed. */ }
@@ -120,6 +157,10 @@ async function run() {
     if (probing || stopping) return;
     probing = true;
     try {
+      if (ocr) {
+        ocr.start();
+        if (ocr.child && Date.now() - ocr.lastMessageAt > 90_000) { await ocr.stop(); if (!stopping) ocr.start(); }
+      }
       const response = await fetch(`http://127.0.0.1:${port}/api/local/health`, { headers: { "x-inventory-secret": secret! }, signal: AbortSignal.timeout(10_000), redirect: "error" });
       const body = await response.json();
       if (stopping) return;
@@ -159,8 +200,9 @@ async function run() {
   const address = server.address();
   if (!address || typeof address === "string") throw new Error("Could not bind local control endpoint.");
   mkdirSync(runtime, { recursive: true });
-  writeFileSync(controlFile, JSON.stringify({ port: address.port, token }), { mode: 0o600 });
+  writeFileSync(controlFile, JSON.stringify({ port: address.port, token, pid: process.pid, nonce: owner.nonce }), { mode: 0o600 });
   api.start();
+  ocr?.start();
   void cleanup?.start();
   log("Supervisor started. Routine probes do not access Neon.");
   console.log("Local services starting. Use npm run local:status; logs are in .folio-local/logs.");

@@ -1,5 +1,9 @@
 # Folio
 
+If a cover cannot be identified, the bot can use readable partial text to search Open Library and Readings, compare the catalog artwork and offer up to three **Review suggestion** options. Choose one to see your saved photo alongside the catalog cover; confirm only if it is your book, or edit the title/author or cancel. Confirmation creates a separate draft and leaves ISBN/edition unverified; it never silently restocks a matching listing. Suggestions expire with the private saved cover after 15 minutes. If there is no suitable proposal, use **Enter title and author** or send the ISBN barcode. Nothing is added before confirmation. Editing invalidates old previews. Restart local services after updating the bot: `npm run local:restart`.
+
+Local mobile OCR: after the comparison environment is installed, run `npm run ocr:enable` in Folio PowerShell. It checks the persistent model worker before enabling mobile → Tesseract → crop fallback and restarting local services. `npm run local:status` shows readiness; `npm run ocr:disable` restores Tesseract. Photos remain local during OCR, and unresolved covers still require barcode/operator review. See [OCR setup and checks](scripts/ocr/README.md). This does not deploy to Cloudflare.
+
 ## Private R2 photo storage
 
 The R2-enabled release binds `PHOTO_BUCKET` to private Standard bucket
@@ -221,6 +225,20 @@ npm run local:up
 npm run local:status
 ```
 
+On Windows, first install or safely update the task:
+
+```powershell
+npm run local:install-startup -- -Update
+npm run local:up
+```
+
+`local:up` now starts the Windows-managed task instead of creating a detached
+process owned by an agent terminal. It waits up to 45 seconds for API and bot
+readiness. Permission-denied status checks fail explicitly instead of launching
+a possible duplicate supervisor. The task starts hidden at logon and checks every
+five minutes for a stopped host, with missed triggers eligible after resume.
+It requires an awake PC and an internet connection.
+
 The hidden launcher starts a loopback-only Next development server using webpack,
 then connects Discord once the local inventory API and OCR assets are ready.
 Allow the first route compilation to finish, then run `local:status` again:
@@ -228,7 +246,9 @@ both `api.ready` and `bot.ready` should be `true`. Do not also run `npm run dev`
 or `npm run bot:discord`. An occupied port or existing bot lock is reported;
 the launcher does not terminate an independently started service.
 
-`npm run local:stop` stops only the launcher's processes. `npm run local:start`
+`npm run local:stop` stops only the launcher's processes and writes a private pause
+marker so the periodic task will not undo an intentional stop. `local:up` removes
+that marker. `npm run local:start`
 keeps the launcher in the current window for troubleshooting. Component logs are
 under `.folio-local/logs`; each retains a 5 MiB file and two rotated copies.
 Configured secrets and database URLs are redacted. Treat logs and the entire
@@ -240,9 +260,14 @@ in your own PowerShell session. It registers the current user's limited-privileg
 script execution is blocked, use the manual launcher for now rather than changing
 machine security policy. Remove the task with
 `powershell.exe -NoProfile -File scripts/install-local-startup.ps1 -Remove`.
-The installer refuses to overwrite an existing task. Reinstall after moving the
-project or replacing the Node executable. The operator installed the task successfully; automatic startup after the next
-Windows logon remains to be verified.
+Use `-- -Update` for an existing task; the installer checks its project folder and
+action before changing it, and refuses unrelated tasks. Reinstall after moving the
+project or replacing the Node executable. The earlier task installation was
+reported successful, but logon/recovery verification is still open. On November 24
+the improved task was prepared and syntax-checked; activation requires the
+operator's PowerShell because this agent cannot access Windows CIM/Task Scheduler
+and its current loopback requests return EACCES. Task-host startup errors go to
+`.folio-local/logs/startup.log` (bounded rotation), with component logs alongside.
 
 The supervisor retries crashes with exponential delay (up to 60 seconds), waits
 through startup compilation, and restarts a bot whose Gateway readiness or

@@ -77,12 +77,17 @@ export type BookMetadata = {
   isbn: string | null;
   coverUrl: string | null;
   coverWorkId?: string;
+  manualEntryId?: string;
   uploadedCover?: string;
   uploadedCoverKey?: string;
   description?: string;
 };
 
 export function inventoryEditionKey(meta: BookMetadata): string | null {
+  if (meta.manualEntryId) {
+    if (!/^[a-f0-9]{20}$/.test(meta.manualEntryId) || meta.isbn || meta.coverWorkId) throw Error("Invalid manual draft identity");
+    return `manual-entry-${meta.manualEntryId}`;
+  }
   return meta.isbn ?? (meta.coverWorkId ? `manual-cover-${meta.coverWorkId.toLowerCase()}` : null);
 }
 
@@ -150,7 +155,7 @@ export async function logScan(
 }
 
 export class AmbiguousInventoryTitle extends Error {
- constructor() { super("Multiple editions match that title. Use the edition’s ISBN or prefix its slug with slug:."); }
+ constructor() { super("Multiple listings match. Use id:<listing ID> or slug:<listing slug> to choose one."); }
 }
 
 export async function importDiscordBook(db: Database, messageId: string, channelId: string, meta: BookMetadata, qty: number) {
@@ -159,14 +164,14 @@ export async function importDiscordBook(db: Database, messageId: string, channel
   const [claim] = await tx.insert(discordCommands).values({messageId, channelId, command: 'IMPORT ' + meta.title}).onConflictDoNothing().returning();
   if (!claim) return null;
   // Serialize imports of the same edition across different Discord messages.
-  await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${editionKey ?? meta.title.toLowerCase()}))`);
+  await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${meta.isbn && canonicalIsbn(meta.isbn) || editionKey || meta.title.toLowerCase()}))`);
   const [existing, other] = await tx.select().from(books)
    .where(meta.isbn && canonicalIsbn(meta.isbn) ? sql`folio_isbn_key(${books.isbn}) = ${canonicalIsbn(meta.isbn)}`
     : editionKey ? eq(books.isbn, editionKey) : sql`lower(${books.title}) = ${meta.title.toLowerCase()}`).limit(2);
   if (other) throw new AmbiguousInventoryTitle();
   if (existing) {
    const [updated] = await tx.update(books).set({stock: sql`${books.stock} + ${qty}`})
-     .where(and(eq(books.id, existing.id), meta.coverWorkId ? eq(books.status, "draft") : undefined))
+     .where(and(eq(books.id, existing.id), meta.coverWorkId || meta.manualEntryId ? eq(books.status, "draft") : undefined))
      .returning();
    if (!updated) throw new Error("The inventory entry changed. Send the photo again or scan the ISBN barcode.");
    if (meta.uploadedCover || meta.uploadedCoverKey) {

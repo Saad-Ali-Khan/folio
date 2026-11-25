@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, readdirSync, writeFileSync, rmSync, existsSync } from "node:fs";
 import path from "node:path";
 import { PassThrough } from "node:stream";
-import { acquireLock, createLog, LocalService, logStream } from "./local-runtime";
+import { acquireLock, createLog, LocalService, logStream, localControlDenied, setLocalPaused } from "./local-runtime";
 import { GET as health } from "../app/api/local/health/route";
 
 const temp = mkdtempSync(path.join(process.cwd(), ".folio-local-test-"));
@@ -17,6 +17,13 @@ async function until(check: () => boolean, timeout = 8000) {
 async function main() {
 let service: LocalService | undefined;
 try {
+  assert.equal(localControlDenied(new Error('fetch failed',{cause:{code:'EACCES'}})),true);
+  assert.equal(localControlDenied({code:'EPERM'}),true);
+  assert.equal(localControlDenied({code:'LOCAL_CONTROL_DENIED'}),true);
+  assert.equal(localControlDenied(new Error('fetch failed',{cause:{code:'ECONNREFUSED'}})),false);
+  console.log('PASS access-denied control checks cannot be mistaken for an offline supervisor');
+  const pausedFile=path.join(temp,'paused');setLocalPaused(pausedFile,true);assert.ok(existsSync(pausedFile));setLocalPaused(pausedFile,false);setLocalPaused(pausedFile,false);assert.equal(existsSync(pausedFile),false);
+  console.log('PASS explicit stop pause persists and explicit up resumes idempotently');
   const values = { INVENTORY_DISCORD_SECRET: "test-health-secret", DISCORD_CHANNEL_ID: "test-channel", INVENTORY_DISCORD_PIN: "123456", DATABASE_URL: "invalid-do-not-connect" };
   const previous = Object.fromEntries(Object.keys(values).map(key => [key, process.env[key]]));
   Object.assign(process.env, values);

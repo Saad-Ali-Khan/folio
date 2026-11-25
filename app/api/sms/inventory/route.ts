@@ -112,7 +112,7 @@ export async function POST(request: Request) {
     const db = await getDb();
     const [book, other] = await findBooksByIdentifier(db, identifier);
 
-    if (other) return reply("Multiple editions match. Use the edition's ISBN or prefix its slug with slug:.");
+    if (other) return reply("Multiple listings match. Use id:<listing ID> or slug:<listing slug>.");
 
     if (!book) {
       return reply(`No book matches "${identifier}".`);

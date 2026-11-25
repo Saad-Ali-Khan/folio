@@ -27,7 +27,7 @@ export async function queueStockChoice(
   if (!choice) return "This command already has a confirmation request. Use the original prompt or send a new command.";
   const list = candidates.map((book, index) => {
     const isbn = book.isbn.startsWith("manual-") ? "ISBN unverified" : `ISBN ${book.isbn.slice(0, 30)}`;
-    return `${index + 1}. ${book.title.slice(0, 120)} (${book.slug.slice(0, 90)}) · ${isbn}`;
+    return `${index + 1}. #${book.id} · ${book.title.slice(0, 120)} (${book.slug.slice(0, 90)}) · ${isbn} · Rs ${(book.priceCents / 100).toFixed(2)} · stock ${book.stock} · ${book.status}`;
   }).join("\n");
   return `Which book did you mean?\n${list}\nReply with your PIN followed by CONFIRM ${choice.id} and the book number. To cancel, use CONFIRM ${choice.id} CANCEL. The choice expires in 5 minutes.`;
 }

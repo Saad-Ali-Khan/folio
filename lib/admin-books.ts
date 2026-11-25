@@ -87,7 +87,7 @@ export async function updateAdminBook(db:Database,input:unknown){
   while (cause && typeof cause === "object") {
    if ("code" in cause && cause.code === "23505" && "constraint" in cause &&
     (cause.constraint === "books_canonical_isbn_unique" || cause.constraint === "books_isbn_unique")) {
-     throw new EditionError("This ISBN was linked to another listing. Refresh inventory; nothing was merged or restocked.", 409);
+     throw new EditionError("The database update for shared ISBNs is not installed yet. No listing was changed.", 503);
    }
    cause = "cause" in cause ? cause.cause : undefined;
   }

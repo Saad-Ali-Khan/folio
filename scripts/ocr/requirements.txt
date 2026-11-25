@@ -1,0 +1,3 @@
+# Isolated CPU trial; no effect on the Node application or live bot.
+paddlepaddle==3.2.2
+paddleocr==3.3.1

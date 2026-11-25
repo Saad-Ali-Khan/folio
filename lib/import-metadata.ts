@@ -1,6 +1,8 @@
 import type { CoverLine } from "./cover-ocr";
 import type { BookMetadata } from "./discord-inventory";
 import { lookupBritishCouncil, lookupHathiTrust } from "./isbn-catalogs";
+import { mergeCoverReadings, stackedTitleProminence } from "./cover-title";
+import { compatibleCoverAuthor, coverTitleVariants, hasCoverAdaptation, hasCoverFormatLabel, isCoverCollection } from "./cover-catalog-titles";
 
 type Edition = { title?: string; language?: string[] };
 type SearchDoc = { key?: string; title?: string; author_name?: string[]; author_key?: string[]; cover_i?: number; edition_count?: number; editions?: { docs?: Edition[] } };
@@ -129,9 +131,9 @@ export async function lookupIsbnMetadata(isbn: string): Promise<IsbnLookup> {
 }
 
 export async function lookupCoverMetadata(lines: CoverLine[], retry = false): Promise<ImportMetadata | null> {
-  const cover = lines.map(line => ({ text: words(line.text), height: line.height })).filter(line => line.text);
+  const cover = mergeCoverReadings(lines).map(line => ({ ...line, text: words(line.text) })).filter(line => line.text);
   const cache = coverCache.folioCoverMatches ??= new Map();
-  const cacheKey = JSON.stringify(cover);
+  const cacheKey = `work-title-v3:${JSON.stringify(cover)}`;
   const cached = cache.get(cacheKey);
   if (cached && cached.expires > Date.now()) return cached.result;
   const visibleWords = new Set(cover.flatMap(line => line.text.split(" ")));
@@ -141,19 +143,27 @@ export async function lookupCoverMetadata(lines: CoverLine[], retry = false): Pr
     return parts.length > 0 && parts.every(word => visibleWords.has(word));
   };
   const phrases = new Map<string, number>();
-  for (let start = 0; start < cover.length; start++) {
-    for (let count = 1; count <= 3 && start + count <= cover.length; count++) {
-      const part = cover.slice(start, start + count);
+  const queryProminence = new Map<string, number>();
+  const confident = cover.filter(line => (line.confidence === undefined || line.confidence >= 65) &&
+    !(line.top !== undefined && line.height > 0.25 && line.text.length < 4));
+  for (let start = 0; start < confident.length; start++) {
+    for (let count = 1; count <= 8 && start + count <= confident.length; count++) {
+      const part = confident.slice(start, start + count);
       const text = part.map(line => line.text).join(" ");
-      if (text.length < 3 || text.length > 100) continue;
+      if (text.length < 3 || text.length > 140) continue;
       const height = Math.max(...part.map(line => line.height));
       phrases.set(text, Math.max(phrases.get(text) ?? 0, height));
+      queryProminence.set(text, Math.max(queryProminence.get(text) ?? 0, Math.min(...part.map(line => line.height))));
     }
   }
-  const queries = [...phrases].sort((a, b) => b[1] - a[1] || b[0].length - a[0].length).slice(0, 18);
+  const queries = [...queryProminence].sort((a, b) => Number(b[0].includes(" ")) - Number(a[0].includes(" ")) ||
+    b[1] - a[1] || b[0].length - a[0].length).slice(0, 18);
   if (!queries.length) return null;
 
-  const queryFor = (count: number) => new URLSearchParams({ q: queries.slice(0, count).map(([text]) => `title:"${text}"`).join(" OR ") });
+  // AND tolerates conjunctions and line breaks omitted by OCR; accepting a
+  // result still requires the full visible title evidence and a visible author.
+  const queryFor = (count: number) => new URLSearchParams({ q: queries.slice(0, count)
+    .map(([text]) => `title:(${text.split(" ").map(word => `"${word}"`).join(" AND ")})`).join(" OR ") });
   let docs: SearchDoc[];
   try {
     docs = await search(queryFor(retry ? 6 : 18), 24, retry ? 10_000 : 4500);
@@ -162,20 +172,26 @@ export async function lookupCoverMetadata(lines: CoverLine[], retry = false): Pr
     // Retry with fewer phrases so a large search cannot keep timing out.
     docs = await search(queryFor(3), 24, 10_000);
   }
-  const matches = new Map<string, { doc: SearchDoc & { title: string }; prominence: number; title: string; author: string }>();
+  type Match = { doc: SearchDoc & { title: string }; prominence: number; title: string; display: string;
+    author: string; authorKey?: string; englishTitle?: string };
+  const matches = new Map<string, Match>();
   for (const doc of docs) {
     const id = workId(doc);
     let author = doc.author_name?.[0];
     if (!id || !doc.title || !author) continue;
-    const titles = [doc.title, doc.editions?.docs?.[0]?.title].flatMap(title =>
-      title ? [title, ...title.split(/\s+\/\s+|[():]/)].map(words) : []);
-    const title = titles.sort((a, b) => (phrases.get(b) ?? 0) - (phrases.get(a) ?? 0))[0];
-    const prominence = phrases.get(title) ?? 0;
-    if (!prominence) continue;
+    const evidence = (title: string) => Math.max(phrases.get(title) ?? 0, stackedTitleProminence(title, confident));
+    const edition = doc.editions?.docs?.[0];
+    // A single book inside a multi-work collection is not the collection.
+    if (isCoverCollection(doc.title) && !evidence(words(doc.title))) continue;
+    if ([doc.title, edition?.title ?? ""].some(title => hasCoverAdaptation(title) &&
+      !evidence(words(title)))) continue;
     if (!visibleAuthor(author)) {
       // English OCR needs catalog aliases for names in another script.
       // Unrelated Latin-script authors can be rejected without extra requests.
       if (!/[^\p{Script=Latin}\p{Script=Common}\p{Script=Inherited}]/u.test(author)) continue;
+      // Do not fetch identities for unrelated non-Latin search results.
+      if (![doc.title, edition?.title ?? ""].some(title => words(title).split(" ")
+        .some(word => word.length >= 4 && visibleWords.has(word)))) continue;
       const key = doc.author_key?.[0];
       if (!key || !/^OL\d+A$/.test(key)) continue;
       let aliases = authorAliases.get(key);
@@ -196,8 +212,22 @@ export async function lookupCoverMetadata(lines: CoverLine[], retry = false): Pr
       author = (await aliases).find(visibleAuthor);
       if (!author) continue;
     }
+    const canonical = coverTitleVariants(doc.title, author);
+    // Some catalog edition labels append the author without punctuation. Strip
+    // that suffix only when the remaining text equals the canonical work title.
+    const editionDisplay = edition?.title && words(edition.title) === `${words(doc.title)} ${words(author)}`
+      ? doc.title : edition?.title;
+    const editionTitles = editionDisplay ? coverTitleVariants(editionDisplay, author, (edition?.language?.length ?? 0) > 1) : [];
+    const candidate = [...canonical, ...editionTitles].sort((a, b) => evidence(b.text) - evidence(a.text))[0];
+    if (!candidate) continue;
+    const { text: title, display } = candidate;
+    const prominence = evidence(title);
+    if (!prominence) continue;
+    const englishTitle = edition?.language?.length === 1 && edition.language[0] === "eng"
+      ? editionTitles.find(candidate => candidate.text === title)?.display : undefined;
     if (prominence && prominence > (matches.get(id)?.prominence ?? 0)) {
-      matches.set(id, { doc: { ...doc, title: doc.title, author_name: [author] }, prominence, title, author: words(author) });
+      matches.set(id, { doc: { ...doc, title: doc.title, author_name: [author] }, prominence, title, display,
+        author: words(author), authorKey: doc.author_key?.[0], englishTitle });
     }
   }
   const [best, ...alternatives] = [...matches.entries()].sort((a, b) =>
@@ -209,23 +239,32 @@ export async function lookupCoverMetadata(lines: CoverLine[], retry = false): Pr
     if (candidate.prominence < match.prominence * 0.85) break;
     // Open Library sometimes has duplicate work records for the same title and author.
     const comparableTitle = (title: string) => title.replace(/^(?:the|an|a) /, "");
-    const duplicate = comparableTitle(candidate.title) === comparableTitle(match.title) && candidate.author === match.author;
-    const established = (match.doc.edition_count ?? 0) >= Math.max(3, 3 * (candidate.doc.edition_count ?? 0));
+    const sameTitle = comparableTitle(candidate.title) === comparableTitle(match.title);
+    const sharedAuthor = Boolean(match.authorKey && candidate.authorKey === match.authorKey);
+    // A weaker abbreviated author label cannot veto a clearly supported full
+    // name on a much better established record. It does not establish an alias.
+    if (sameTitle && compatibleCoverAuthor(match.author, candidate.author) &&
+      (match.doc.edition_count ?? 0) >= Math.max(3, 3 * (candidate.doc.edition_count ?? 0))) continue;
+    const duplicate = sameTitle && (candidate.author === match.author || sharedAuthor);
+    const established = (match.doc.edition_count ?? 0) >= Math.max(3, (sharedAuthor ? 2 : 3) * (candidate.doc.edition_count ?? 0));
     if (!duplicate || !established) return null;
-    const edition = candidate.doc.editions?.docs?.[0];
-    if (edition?.language?.length === 1 && edition.language[0] === "eng" &&
-        edition.title && words(edition.title) === match.title) englishEdition = edition;
+    if (candidate.englishTitle && comparableTitle(words(candidate.englishTitle)) === comparableTitle(match.title)) {
+      englishEdition = { title: candidate.englishTitle, language: ["eng"] };
+    }
   }
   // Prefer an exact English title over a bilingual or collection label.
-  const selected = match.doc.editions?.docs?.[0];
-  const exactEnglish = selected?.language?.length === 1 && selected.language[0] === "eng" &&
-    words(selected.title ?? "") === match.title;
-  const doc = englishEdition && !exactEnglish
-    ? { ...match.doc, editions: { docs: [englishEdition] } }
-    : match.doc;
+  const safeEnglish = match.englishTitle ? { title: match.englishTitle, language: ["eng"] } : englishEdition;
+  if (safeEnglish && words(safeEnglish.title ?? "").replace(/^(?:the|an|a) /, "") ===
+    match.title.replace(/^(?:the|an|a) /, "")) safeEnglish.title = match.display;
+  const doc = safeEnglish ? { ...match.doc, editions: { docs: [safeEnglish] } } : match.doc;
   // A work match does not verify the physical edition or its translator.
   // Keep the uploaded photo without borrowing another edition's artwork.
-  const result = { ...await metadataFromDoc(doc, null), coverUrl: null, coverWorkId: id };
+  let metadata = await metadataFromDoc(doc, null);
+  if (hasCoverFormatLabel(metadata.title)) {
+    metadata = { title: match.display, author: match.doc.author_name![0], isbn: null, coverUrl: null,
+      titleNote: "The visible work title was retained; catalog edition/format labels remain unverified." };
+  }
+  const result = { ...metadata, coverUrl: null, coverWorkId: id };
   if (cache.size >= 100) cache.delete(cache.keys().next().value!);
   cache.set(cacheKey, { result, expires: Date.now() + 30 * 60_000 });
   return result;

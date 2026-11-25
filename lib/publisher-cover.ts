@@ -11,7 +11,7 @@ const IMAGES = "https://d9z6htgewkjtb.cloudfront.net";
 type RecordMatch = { Book_Id: number; BOOK_TITLE: string; authorName: string; publisherName: string; BOOK_ISBN: string };
 type Fingerprint = { pixels: Buffer; colors: number[] };
 
-async function boundedFetch(url: string, signal: AbortSignal, maxBytes: number) {
+export async function boundedFetch(url: string, signal: AbortSignal, maxBytes: number) {
   const response = await fetch(url, { signal, redirect: "error" });
   if (!response.ok || Number(response.headers.get("content-length")) > maxBytes) throw new Error("Publisher unavailable");
   const reader = response.body?.getReader();
@@ -122,7 +122,7 @@ export async function lookupPublisherCover(image: Buffer, meta: ImportMetadata, 
   }
 }
 
-async function readingsCovers(meta: ImportMetadata, signal: AbortSignal): Promise<CoverCandidate[]> {
+export async function readingsCovers(meta: Pick<ImportMetadata, "title">, signal: AbortSignal): Promise<CoverCandidate[]> {
   const data = JSON.parse((await boundedFetch(`${API}/api/autocomplete?search=${encodeURIComponent(meta.title.slice(0, 150))}`, signal, 512_000)).toString()) as { results?: RecordMatch[] };
   return (data.results ?? []).flatMap(record => {
     if (!Number.isSafeInteger(record.Book_Id) || record.Book_Id <= 0 ||

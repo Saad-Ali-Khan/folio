@@ -120,6 +120,13 @@
       "when": 1795443968523,
       "tag": "0016_pending_covers",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1795589336043,
+      "tag": "0017_shared_isbn_listings",
+      "breakpoints": true
     }
   ]
 }

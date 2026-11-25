@@ -102,7 +102,7 @@ export function EditionFields({ bookId, isbn, value, onChange, onExpired, disabl
           <label className="block text-sm" htmlFor="edition-isbn-evidence">ISBN note (optional)<input id="edition-isbn-evidence" className={field} maxLength={1000}
             value={value.isbnEvidence} placeholder="Optional details about the barcode or copyright page" onChange={event => onChange({ ...value, isbnEvidence: event.target.value })} /></label>
           <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1" required checked={value.isbnConfirmed} onChange={event => onChange({ ...value, isbnConfirmed: event.target.checked })} />
-            <span>I verified this ISBN on the physical copy. Matching an existing listing will stop this save; it will not merge copies.</span></label>
+            <span>I verified this ISBN on the physical copy. Other listings may share it; each listing keeps its own stock and details.</span></label>
         </>}
       </div>}
       <p className="text-xs text-ink/60">Edition changes are saved with the book using the Save button below.</p>
