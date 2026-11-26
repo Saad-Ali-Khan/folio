@@ -26,6 +26,7 @@
     "db:studio": "drizzle-kit studio",
     "backup:create": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/backup.ts create",
     "backup:upload": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/backup.ts upload",
+    "backup:retention": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/backup-retention.ts",
     "backup:verify": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/backup.ts verify",
     "backup:recover-sql": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/backup.ts recover-sql",
     "books": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/books.ts",

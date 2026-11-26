@@ -1,5 +1,11 @@
 # Folio architecture
 
+## Backup retention preview (November 26, 2026)
+
+Operator subsequently approved the eight local removals. Preflight verified all candidate/retained hashes, sizes and directory boundaries; only the approved archive files were removed, preserving five daily points, protected reference/download files and verification sidecars. A private cleanup receipt records the exact removed hashes. No remote objects changed and the planner remains non-destructive.
+
+`backup:retention` provides a local-only review manifest: latest per seven available Toronto backup dates plus four additional older Monday-start weeks, preserving gaps/the latest point rather than expiring everything by age. Authenticated snapshot timestamps drive selection; unknown/manual names, nonregular/symlink paths, failed integrity checks and missing restore reports are protected. The ignored manifest includes hashes to support a later stale-file check. It cannot delete files or access R2. Tests cover date/DST boundaries, duplicate days, sparse/old history, file integrity and non-destructive scanning. Five currently retained daily points passed fresh isolated restore; eight excess local archives await cleanup approval. The single R2 backup remains unchanged; remote lifecycle automation is not enabled. See [retention details](r2-backups.md#retention-policy).
+
 ## Off-device R2 archive upload (November 26, 2026)
 
 Live dashboard acceptance completed November 26: folio-backups exists with Standard storage and public access disabled. The 520,479-byte November 26 encrypted archive was uploaded manually, downloaded, matched to the original SHA-256 and restored in isolated PGlite (twenty tables, 158 rows, six photos/archived objects, seven sequences). No key or runtime credentials were uploaded. This validates the first off-device recovery point, separately from the scripted S3 transport; command-line credentials remain unconfigured. No automatic backup schedule or retention deletion was enabled.
