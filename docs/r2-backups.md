@@ -1,6 +1,6 @@
 # Encrypted off-device backups
 
-Status November 26: private Standard bucket created; first encrypted archive uploaded and downloaded manually through the dashboard, with matching SHA-256 and isolated recovery passing. Command-line S3 credentials remain unconfigured. The application limits below apply only to the scripted uploader, not manual dashboard uploads.
+Status November 26: private Standard bucket created; manual and scripted encrypted archive upload/download checks both passed SHA-256 and isolated recovery. Separate bucket-only S3 credentials are configured locally. The scripted November 26 archive contains twenty tables, 158 rows, six photos/archived objects and seven sequences; its .r2.json receipt is private. The original dashboard copy remains alongside the content-hash object, representing the same recovery point. The application limits below apply only to the scripted uploader, not manual dashboard uploads.
 
 Use private Standard bucket `folio-backups`, public access disabled, without a Worker binding. Save separate bucket-scoped Object Read & Write S3 credentials in ignored `.env.local` as `R2_BACKUP_ACCESS_KEY_ID` and `R2_BACKUP_SECRET_ACCESS_KEY`. Existing `R2_ACCOUNT_ID` is reused; photo credentials stay restricted to `folio-photos`.
 
