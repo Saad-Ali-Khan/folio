@@ -38,7 +38,7 @@ export function partialCoverQueries(lines: CoverLine[]) {
 }
 // Partial text is search evidence only: it never becomes an automatic work/ISBN match.
 export function supportsSuggestion(candidate: CoverCandidate, queries: string[]) {
-  const title = meaningful(candidate.title), author = meaningful(candidate.author);
+  const author = meaningful(candidate.author), title = meaningful(candidate.title).filter(word=>!author.includes(word));
   return queries.some((query,i) => meaningful(query).some(word => title.includes(word)) &&
     queries.some((other,j) => i!==j && meaningful(other).some(word => author.includes(word))));
 }
@@ -111,6 +111,7 @@ export async function suggestCoverCandidates(image: Buffer, lines: CoverLine[], 
         identityEvidence:partial?"partial-title-author" as const:"author-and-artwork" as const,
       }));
   const unique=new Set<string>();
+  let authorOnlyComparisons=0;
   const job=Promise.allSettled([...queries.map(query=>deps.search(query,signal)),...(deps.discover&&queries.length>=2?[deps.discover(queries,signal)]:[])]
     .map(async source=>{
       const results=await source;
@@ -119,6 +120,9 @@ export async function suggestCoverCandidates(image: Buffer, lines: CoverLine[], 
         const partial=supportsSuggestion(candidate,queries);
         if(signal.aborted||unique.has(candidate.source)||unique.size>=12||(!partial&&!fullAuthorVisible(candidate,queries))||!visibleAuthorAllows(candidate.author,lines)||
           candidate.title.length>200||candidate.author.length>140||/[\p{Cc}\p{Cf}]/u.test(candidate.title+candidate.author)||!trustedSuggestion(candidate))return;
+        // Keep most of the bounded image budget available for independent title+author evidence.
+        if(!partial&&authorOnlyComparisons>=3)return;
+        if(!partial)authorOnlyComparisons++;
         unique.add(candidate.source);
         const reference=await deps.read(candidate.coverUrl,signal,2_000_000);
         const match=await deps.compare(image,reference);

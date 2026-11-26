@@ -1031,6 +1031,8 @@ Cover-only imports check Readings, Open Library edition records, and Google Book
 
 ### Application backups and recovery
 
+For optional private off-device uploads, see [R2 backup setup](docs/r2-backups.md). `npm run backup:upload` verifies the latest encrypted archive locally, uploads within conservative limits, then verifies the downloaded copy. Separate bucket credentials are required.
+
 Run `npm run backup:create` from the repository root. It reads production in a
 repeatable-read, read-only transaction, saves a gzip-compressed AES-256-GCM
 archive under `.folio-backups`, and verifies the exact recovery SQL against a

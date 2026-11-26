@@ -32,6 +32,8 @@ async function main(){
     coverUrl:"https://d9z6htgewkjtb.cloudfront.net/9780805210552.webp",source:"https://readings.com.pk/book/1819875",catalog:"Readings catalog"};
   assert(supportsSuggestion(candidate,partialCoverQueries(lines)));
   assert(!supportsSuggestion({...candidate,title:"Kafka"},partialCoverQueries(lines)),"one author clue cannot stand for both title and author");
+  assert(!supportsSuggestion({...candidate,title:"The Stories of Ray Bradbury",author:"Ray Bradbury"},["ray bradbury","hay bradbury","fahrenheit 451"]),
+    "author-name words in a title cannot reuse author evidence as a separate title clue");
   const deps={search:async()=>[candidate,{...candidate,author:"Another Author"}],read:async()=>Buffer.from("fake"),compare:async()=>({gray:.20,color:.12,score:.16})};
   const candidates=await suggestCoverCandidates(Buffer.from("test"),lines,deps);
   assert.equal(candidates.length,1);assert.equal(candidates[0].matchQuality,"possible");
@@ -43,6 +45,14 @@ async function main(){
   const closeDeps={...deps,search:async()=>[candidate],compare:async()=>({gray:.10,color:.10,score:.10})};
   const authorProposal=await suggestCoverCandidates(Buffer.from("test"),authorOnly,closeDeps);
   assert.equal(authorProposal.length,1);assert.equal(authorProposal[0].identityEvidence,"author-and-artwork");
+  const downloaded:string[]=[];
+  const weak=Array.from({length:8},(_,i)=>({...candidate,title:`Different work ${i}`,source:`https://readings.com.pk/book/${i+20}`,coverUrl:`https://d9z6htgewkjtb.cloudfront.net/${9780805210500+i}.webp`}));
+  const mixed=[...weak,candidate];
+  const prioritized=await suggestCoverCandidates(Buffer.from("test"),[...lines,...authorOnly],{...closeDeps,search:async()=>mixed,
+    read:async url=>{downloaded.push(url);return Buffer.from(url);},
+    compare:async (_image,reference)=>reference.toString()===candidate.coverUrl?{gray:.10,color:.10,score:.10}:{gray:.11,color:.11,score:.11}});
+  assert.equal(downloaded.length,4,"only three author-only comparisons can precede a title-supported match");
+  assert(prioritized.some(row=>row.title===candidate.title));
   assert.equal((await suggestCoverCandidates(Buffer.from("test"),authorOnly,{...closeDeps,compare:async()=>({gray:.13,color:.10,score:.115})})).length,0,"author-only proposals use a stricter artwork threshold");
   assert.equal((await suggestCoverCandidates(Buffer.from("test"),[{text:"F. Kafka",height:.05,confidence:98}],closeDeps)).length,0,"an initial cannot verify the full author name for this fallback");
   const ol={...candidate,identity:"work:/works/OL123W",source:"https://openlibrary.org/works/OL123W",coverUrl:"https://covers.openlibrary.org/b/id/123-L.jpg?default=false"};

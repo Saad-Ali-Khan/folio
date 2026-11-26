@@ -1,0 +1,15 @@
+# Encrypted off-device backups
+
+Status November 26: private Standard bucket created; first encrypted archive uploaded and downloaded manually through the dashboard, with matching SHA-256 and isolated recovery passing. Command-line S3 credentials remain unconfigured. The application limits below apply only to the scripted uploader, not manual dashboard uploads.
+
+Use private Standard bucket `folio-backups`, public access disabled, without a Worker binding. Save separate bucket-scoped Object Read & Write S3 credentials in ignored `.env.local` as `R2_BACKUP_ACCESS_KEY_ID` and `R2_BACKUP_SECRET_ACCESS_KEY`. Existing `R2_ACCOUNT_ID` is reused; photo credentials stay restricted to `folio-photos`.
+
+Run `npm run backup:create`, then `npm run backup:upload`. Upload selects the latest normally named local archive, or pass an explicit path with `npm run backup:upload -- "C:\path\archive.foliobackup"`. The archive must decrypt and pass isolated recovery before any network request. Only encrypted bytes are uploaded under a content-hash key, with conditional PUT to prevent overwriting. The downloaded copy must match SHA-256 and pass isolated recovery before writing the local `.r2.json` receipt. Repeated uploads verify the existing object. Local archives and recovery keys are never deleted or uploaded together.
+
+Limits: 1 GB and 100 objects in the entire backup bucket; 130 MiB per file; 200 attempted S3 requests per UTC month from this workspace. Normal upload uses three requests, existing-object verification two. Incomplete/invalid listings stop uploads. No automatic retries/deletions. Run from one PC only: a workspace lock prevents local concurrent uploads, not other machines. Do not reset `.folio-backups/r2-requests.json` to bypass the budget. If interrupted, confirm no uploader runs before manually removing only `.folio-backups/r2-upload.lock`.
+
+The existing photo allocation is 8 GB; backups get 1 GB, leaving headroom under the shared 10 GB-month Standard allowance when only these controlled buckets are used. This is not an account-wide hard spending cap: other buckets/tools also count. Keep weekly dashboard reviews and existing alerts. Infrequent Access has no free allowance. [R2 pricing](https://developers.cloudflare.com/r2/pricing/).
+
+Retention is initially non-destructive: stop at limits and review seven-daily/four-weekly retention before enabling deletion. The reminder still prompts manual backup creation; no background backup/upload schedule was added. Keep local encrypted copies and safeguard the original recovery key separately outside Cloudflare and the PC. Same-account backups protect against PC loss but do not provide independent-provider recovery. Application archives still exclude runtime secrets, database roles and account settings.
+
+Recovery check: download the private `.foliobackup` object, then `npm run backup:verify -- "C:\path\downloaded.foliobackup"` with the original key available locally. This restores only into isolated in-memory PGlite. Use the existing new-empty-database instructions for actual recovery, never production during a check.
