@@ -6,7 +6,9 @@ export function catalogSuggestionUi(result:Pick<CoverReply,"coverSuggestions"|"s
   const components=suggestions.length?[new ActionRowBuilder<ButtonBuilder>().addComponents(...suggestions.map((item,i)=>
     new ButtonBuilder().setCustomId(`folio-suggest:${item.id}`).setLabel(`Review suggestion ${i+1}`).setStyle(ButtonStyle.Primary)))]:[];
   const embeds=suggestions.map((item,i)=>({title:`Possible match ${i+1}: ${item.title}`,description:`${item.author}\n${item.note??"Catalog suggestion — compare with your copy."}`,url:item.source,image:{url:item.coverUrl}}));
-  if(result.suggestedCatalog)embeds.push({title:`Catalog cover: ${result.suggestedCatalog.title}`,description:"Compare with your saved photo. ISBN and edition are not verified.",url:result.suggestedCatalog.source,image:{url:result.suggestedCatalog.coverUrl}});
+  if(result.suggestedCatalog)embeds.push({title:`${result.suggestedCatalog.artworkUnmatched?'Example catalog cover (unmatched)':'Catalog cover'}: ${result.suggestedCatalog.title}`,
+    description:result.suggestedCatalog.artworkUnmatched?"Catalog artwork not matched—edition unverified. Only title and author will be used; your uploaded photo is kept.":"Compare with your saved photo. ISBN and edition are not verified.",
+    url:result.suggestedCatalog.source,image:{url:result.suggestedCatalog.coverUrl}});
   return {components,embeds};
 }
 

@@ -13,6 +13,10 @@ type Fingerprint = { pixels: Buffer; colors: number[] };
 
 export async function boundedFetch(url: string, signal: AbortSignal, maxBytes: number) {
   const response = await fetch(url, { signal, redirect: "error" });
+  return boundedBody(response, maxBytes);
+}
+
+async function boundedBody(response: Response, maxBytes: number) {
   if (!response.ok || Number(response.headers.get("content-length")) > maxBytes) throw new Error("Publisher unavailable");
   const reader = response.body?.getReader();
   if (!reader) throw new Error("Empty publisher response");
@@ -28,6 +32,45 @@ export async function boundedFetch(url: string, signal: AbortSignal, maxBytes: n
     }
   } finally { await reader.cancel(); }
   return Buffer.concat(chunks);
+}
+
+// Open Library may redirect a cover to its Internet Archive storage shard.
+// Validate every hop against the original cover ID; never follow arbitrary URLs.
+export async function readCatalogCover(url: string, signal: AbortSignal, maxBytes: number, request: typeof fetch = fetch) {
+  if (!url.startsWith('https://covers.openlibrary.org/')) return boundedFetch(url, signal, maxBytes);
+  const match = /^https:\/\/covers\.openlibrary\.org\/b\/id\/([1-9]\d*)-L\.jpg\?default=false$/.exec(url);
+  if (!match || !Number.isSafeInteger(Number(match[1]))) throw Error('Invalid Open Library cover URL');
+  const id = Number(match[1]), group = `l_covers_${Math.floor(id / 1_000_000).toString().padStart(4,'0')}`;
+  const zip = `${group}_${Math.floor(id % 1_000_000 / 10_000).toString().padStart(2,'0')}.zip`;
+  const file = `${match[1].padStart(10,'0')}-L.jpg`;
+  const legacy = `olcovers${Math.floor(id / 10_000)}`;
+  const layouts = [{group,zip,file},{group:legacy,zip:`${legacy}-L.zip`,file:`${id}-L.jpg`}];
+  const allowed = (target: URL) => {
+    if (target.protocol !== 'https:' || target.username || target.password || target.port || target.hash) return false;
+    if (target.href === url) return true;
+    if (target.hostname === 'archive.org') return !target.search && layouts.some(row=>target.pathname === `/download/${row.group}/${row.zip}/${row.file}`);
+    return /^ia\d{6}\.us\.archive\.org$/.test(target.hostname) && target.pathname === '/view_archive.php' &&
+      layouts.some(row=>target.searchParams.get('file') === row.file &&
+        new RegExp(`^/\\d+/items/${row.group}/${row.zip.replace('.', '\\.')}$`).test(target.searchParams.get('archive') ?? '')) &&
+      [...target.searchParams.keys()].sort().join(',') === 'archive,file';
+  };
+  let target = new URL(url);
+  const visited = new Set<string>();
+  for (let hop=0; hop<=3; hop++) {
+    if (!allowed(target) || visited.has(target.href)) throw Error('Untrusted Open Library cover redirect');
+    visited.add(target.href);
+    const response = await request(target.href, {signal, redirect:'manual'});
+    if ([301,302,303,307,308].includes(response.status)) {
+      const location = response.headers.get('location'); await response.body?.cancel();
+      if (!location || hop === 3) throw Error('Open Library cover redirect limit');
+      target = new URL(location, target); continue;
+    }
+    if (response.headers.get('content-type') && !response.headers.get('content-type')!.toLowerCase().startsWith('image/')) {
+      await response.body?.cancel(); throw Error('Open Library cover did not return an image');
+    }
+    return boundedBody(response, Math.min(maxBytes,2_000_000));
+  }
+  throw Error('Open Library cover unavailable');
 }
 
 async function fingerprint(image: Buffer, inset = 0): Promise<Fingerprint> {
@@ -84,7 +127,7 @@ export async function lookupPublisherCover(image: Buffer, meta: ImportMetadata, 
     for (let start = 0; start < candidates.length; start += 4) {
       compared.push(...await Promise.all(candidates.slice(start, start + 4).map(async candidate => {
       try {
-        const bytes = await boundedFetch(candidate.coverUrl, signal, 2_000_000);
+        const bytes = await readCatalogCover(candidate.coverUrl, signal, 2_000_000);
         return { candidate, ...await compare(variants, bytes) };
       } catch { return null; }
       })));

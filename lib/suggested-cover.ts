@@ -18,13 +18,16 @@ export async function queueSuggestedCover(db:Database,coverId:string,userId:stri
       const [created]=await tx.insert(coverBarcodeChoices).values({id:randomBytes(5).toString("hex"),sourceMessageId,userId,channelId,
         coverIds:[cover.id],qty:cover.qty,explicitQty:0,expiresAt:cover.expiresAt,
         metadata:{title:candidate.title,author:candidate.author,isbn:null,coverUrl:null,manualEntryId:cover.id,editionCandidates:[candidate],
-          description:"Title and author suggested from partial OCR and catalog artwork, confirmed by the operator. Physical ISBN, edition and translator remain unverified."}
+          description:candidate.identityEvidence==='title-author-only'?
+            "Title and author read from the cover and confirmed by the operator. Catalog artwork not matched; publisher, physical ISBN, edition and translator remain unverified.":
+            "Title and author suggested from partial OCR and catalog artwork, confirmed by the operator. Physical ISBN, edition and translator remain unverified."}
       }).onConflictDoNothing({target:coverBarcodeChoices.sourceMessageId}).returning();
       const row=created??(await tx.select().from(coverBarcodeChoices).where(eq(coverBarcodeChoices.sourceMessageId,sourceMessageId)))[0];
       if(row?.state==="pending")choices.push({id:row.id,title:candidate.title,author:candidate.author,coverUrl:candidate.coverUrl,source:candidate.source,
-        note:candidate.identityEvidence==="author-and-artwork"?"Only the full author name was readable. The title is a catalog proposal based on similar artwork; check it carefully.":undefined});
+        note:candidate.identityEvidence==='title-author-only'?"Title and author match the cover text. Catalog artwork not matched—edition unverified. Your uploaded photo is kept; no catalog ISBN or edition details will be copied.":
+          candidate.identityEvidence==="author-and-artwork"?"Only the full author name was readable. The title is a catalog proposal based on similar artwork; check it carefully.":undefined});
     }
-    return choices.length?{reply:"I found possible catalog matches using partial cover text and artwork. Compare the covers and choose one to review. Nothing has been added. Confirmation creates a separate draft; the catalog ISBN stays unlinked. Your photo is private for 15 minutes. You can also enter the title/author or send the barcode.",
+    return choices.length?{reply:"I found possible catalog matches. Review the title, author and artwork warning before confirming. Nothing has been added. Confirmation creates a separate draft; the catalog ISBN stays unlinked. Your photo is private for 15 minutes. You can also enter the title/author or send the barcode.",
       manualCoverId:cover.id,coverSuggestions:choices,cleanupAt:cover.expiresAt.toISOString()}:null;
   });
 }
@@ -38,7 +41,7 @@ export async function previewSuggestedCover(db:Database,id:string,userId:string,
   const [cover]=await db.select().from(pendingCovers).where(and(eq(pendingCovers.id,coverId),eq(pendingCovers.userId,userId),
     eq(pendingCovers.channelId,channelId),eq(pendingCovers.state,"waiting"),gt(pendingCovers.expiresAt,new Date())));
   if(!cover)return unavailable;
-  return {reply:`Review the manual draft.\nTitle: ${choice.metadata.title}\nAuthor: ${choice.metadata.author}\nQuantity: ${cover.qty}\nSuggested catalog source: ${candidate.source}\n${candidate.identityEvidence==="author-and-artwork"?"Only the full author name was readable; this title is proposed from catalog artwork, not verified OCR.\n":""}Compare both images. Confirm only if this is your book. This receives a separate draft, even if a matching listing already exists. ISBN, edition and translator remain unverified. No stock has been added.`,
+  return {reply:`Review the manual draft.\nTitle: ${choice.metadata.title}\nAuthor: ${choice.metadata.author}\nQuantity: ${cover.qty}\nSuggested catalog source: ${candidate.source}\n${candidate.identityEvidence==='title-author-only'?"Catalog artwork not matched—edition unverified. Confirm the title and author against your saved photo. The catalog image is only an example; its artwork, ISBN and edition details will not be copied.\n":candidate.identityEvidence==="author-and-artwork"?"Only the full author name was readable; this title is proposed from catalog artwork, not verified OCR.\n":""}Confirm only if this is your book. This receives a separate draft, even if a matching listing already exists. ISBN, edition and translator remain unverified. No stock has been added.`,
     manualDraftChoice:{id:choice.id,coverId,qty:cover.qty},coverMatch:{id:choice.id,covers:[{id:coverId,label:"Your saved cover"}]},
-    suggestedCatalog:{title:candidate.title,coverUrl:candidate.coverUrl,source:candidate.source},cleanupAt:cover.expiresAt.toISOString()};
+    suggestedCatalog:{title:candidate.title,coverUrl:candidate.coverUrl,source:candidate.source,artworkUnmatched:candidate.identityEvidence==='title-author-only'},cleanupAt:cover.expiresAt.toISOString()};
 }

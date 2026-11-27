@@ -10,7 +10,7 @@ import { queueTitleChoice } from "./title-choice";
 
 export type CoverReply = { reply: string; completed?: boolean; titleChoiceId?: string; cleanupAt?: string;
   coverSuggestions?: {id:string;title:string;author:string;coverUrl:string;source:string;note?:string}[];
-  suggestedCatalog?: {title:string;coverUrl:string;source:string};
+  suggestedCatalog?: {title:string;coverUrl:string;source:string;artworkUnmatched?:boolean};
   manualCoverId?: string; manualDraftChoice?: { id: string; coverId: string; qty: number };
   coverMatch?: { id: string; covers: { id: string; label: string }[] } };
 const ttl = 15 * 60_000;

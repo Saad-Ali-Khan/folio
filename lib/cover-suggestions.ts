@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import type { CoverLine } from "./cover-ocr";
 import { normalizeCoverText, type CoverCandidate } from "./cover-catalogs";
-import { boundedFetch, coverDistance, readingsCovers } from "./publisher-cover";
+import { boundedFetch, coverDistance, readingsCovers, readCatalogCover } from "./publisher-cover";
 import type { EditionCandidate } from "./edition-types";
 import { canonicalIsbn } from "./isbn";
 import {coverTitleVariants} from "./cover-catalog-titles";
@@ -46,6 +46,15 @@ function fullAuthorVisible(candidate:CoverCandidate,queries:string[]) {
   const author=normalizeCoverText(candidate.author);
   return meaningful(author).length>=2&&queries.some(query=>normalizeCoverText(query)===author);
 }
+/** Work review only: require exact complete title and full author/explicit initials at high confidence. */
+export function supportsTextOnlyReview(candidate:CoverCandidate,lines:CoverLine[]) {
+  const strong=lines.filter(line=>(line.confidence??0)>=85&&line.height>=.025&&line.height<=.35&&!noise.test(line.text));
+  const visible=[...partialCoverQueries(strong),...strong.map(line=>normalizeCoverText(line.text.replace(/^(?:(?:a|the)\s+)?(?:novel|book)\s+by\s+|^by\s+/i,'')))];
+  const title=normalizeCoverText(candidate.title.replace(/\s*\([^)]*\)\s*$/,'')).replace(/^(the|a|an) /,'');
+  const author=normalizeCoverText(candidate.author);
+  return /[a-z]{4}/.test(title)&&meaningful(title).some(word=>!meaningful(author).includes(word))&&
+    visible.some(text=>text.replace(/^(the|a|an) /,'')===title)&&author.split(' ').length>=2&&visible.includes(author)&&visibleAuthorAllows(candidate.author,strong);
+}
 export function visibleAuthorAllows(author:string,lines:CoverLine[]) {
   const parts=normalizeCoverText(author).split(" ");
   const clues=lines.filter(line=>(line.confidence??0)>=85).flatMap(line=>{
@@ -61,6 +70,13 @@ export function visibleAuthorAllows(author:string,lines:CoverLine[]) {
 }
 const titleKey=(candidate:CoverCandidate)=>coverTitleVariants(candidate.title.replace(/\s*\([^)]*\)\s*$/,""),candidate.author)
   .map(variant=>variant.text.replace(/^(the|a|an) /,"")).sort((a,b)=>a.length-b.length)[0]??"";
+function unsupportedExpansion(candidate:CoverCandidate,base:CoverCandidate,queries:string[]) {
+  const author=meaningful(candidate.author);
+  const tokens=(row:CoverCandidate)=>meaningful(titleKey(row)).filter(word=>!author.includes(word));
+  const longer=tokens(candidate),shorter=tokens(base),extra=longer.filter(word=>!shorter.includes(word));
+  return shorter.length>0&&shorter.every(word=>longer.includes(word))&&extra.length>0&&
+    !extra.some(word=>queries.some(query=>meaningful(query).includes(word)));
+}
 type Dependencies = {
   deadlineMs?:number;
   search(query: string, signal: AbortSignal): Promise<CoverCandidate[]>;
@@ -90,7 +106,7 @@ function trustedSuggestion(candidate:CoverCandidate) {
   return /^https:\/\/d9z6htgewkjtb\.cloudfront\.net\/97[89]\d{10}\.webp$/.test(candidate.coverUrl)&&/^https:\/\/readings\.com\.pk\/book\/\d+$/.test(candidate.source)||
     /^https:\/\/covers\.openlibrary\.org\/b\/id\/[1-9]\d*-L\.jpg\?default=false$/.test(candidate.coverUrl)&&/^https:\/\/openlibrary\.org\/works\/OL\d+W$/.test(candidate.source);
 }
-const defaults: Dependencies = { search: (title,signal) => readingsCovers({title},signal), discover:discoverPartialWorks,read: boundedFetch, compare: coverDistance };
+const defaults: Dependencies = { search: (title,signal) => readingsCovers({title},signal), discover:discoverPartialWorks,read: readCatalogCover, compare: coverDistance };
 export async function suggestCoverCandidates(image: Buffer, lines: CoverLine[], deps: Dependencies = defaults): Promise<EditionCandidate[]> {
   const queries = partialCoverQueries(lines);
   if (!queries.length) return [];
@@ -99,17 +115,28 @@ export async function suggestCoverCandidates(image: Buffer, lines: CoverLine[], 
   // Race the full job too: an unresponsive dependency cannot delay the retained-cover response forever.
   let timer: ReturnType<typeof setTimeout> | undefined;
   const compared:{candidate:CoverCandidate;gray:number;color:number;score:number;partial:boolean}[]=[];
-  const rank=()=>compared.filter(match=>match.partial?((match.gray<=.22&&match.color<=.22)||(match.gray<=.32&&match.color<=.18)):
+  const textCandidates=new Map<string,CoverCandidate>();
+  const workKey=(candidate:Pick<CoverCandidate,'title'|'author'>)=>normalizeCoverText(candidate.title.replace(/\s*\([^)]*\)\s*$/,'')).replace(/^(the|a|an) /,'')+'|'+normalizeCoverText(candidate.author);
+  const rank=()=>{
+    const artwork=compared.filter(match=>match.partial?((match.gray<=.22&&match.color<=.22)||(match.gray<=.32&&match.color<=.18)):
     match.gray<=.12&&match.color<=.12)
       .filter((match,_,eligible)=>!eligible.some(other=>other!==match&&other.score<=match.score&&
         normalizeCoverText(other.candidate.author)===normalizeCoverText(match.candidate.author)&&titleKey(other.candidate)&&
-        titleKey(match.candidate).startsWith(titleKey(other.candidate)+" ")))
+        unsupportedExpansion(match.candidate,other.candidate,queries)))
       .sort((a,b)=>a.score-b.score).slice(0,3).map(({candidate,gray,color,partial})=>({
         id: createHash("sha256").update(candidate.source).digest("hex").slice(0,24), title:candidate.title,author:candidate.author,
         publisher:candidate.publisher,coverUrl:candidate.coverUrl,source:candidate.source,catalog:candidate.catalog,
         isbn:canonicalIsbn(candidate.identity.replace(/^isbn:/,"")),matchQuality:gray<=0.16&&color<=0.16?"close" as const:"possible" as const,
         identityEvidence:partial?"partial-title-author" as const:"author-and-artwork" as const,
       }));
+    const represented=new Set(artwork.map(workKey));
+    const textOnly=[...textCandidates.values()].filter(candidate=>!represented.has(workKey(candidate))).map(candidate=>({
+      id:createHash('sha256').update(candidate.source).digest('hex').slice(0,24),title:candidate.title,author:candidate.author,
+      publisher:'',isbn:null,coverUrl:candidate.coverUrl,source:candidate.source,catalog:candidate.catalog,
+      matchQuality:'possible' as const,identityEvidence:'title-author-only' as const,
+    }));
+    return [...artwork,...textOnly].slice(0,3);
+  };
   const unique=new Set<string>();
   let authorOnlyComparisons=0;
   const job=Promise.allSettled([...queries.map(query=>deps.search(query,signal)),...(deps.discover&&queries.length>=2?[deps.discover(queries,signal)]:[])]
@@ -118,8 +145,11 @@ export async function suggestCoverCandidates(image: Buffer, lines: CoverLine[], 
       // Start artwork comparisons as each catalog finishes; a slow source cannot discard completed matches.
       await Promise.allSettled(results.slice(0,30).map(async candidate=>{
         const partial=supportsSuggestion(candidate,queries);
-        if(signal.aborted||unique.has(candidate.source)||unique.size>=12||(!partial&&!fullAuthorVisible(candidate,queries))||!visibleAuthorAllows(candidate.author,lines)||
+        if(signal.aborted||unique.has(candidate.source)||(!partial&&!fullAuthorVisible(candidate,queries))||!visibleAuthorAllows(candidate.author,lines)||
           candidate.title.length>200||candidate.author.length>140||/[\p{Cc}\p{Cf}]/u.test(candidate.title+candidate.author)||!trustedSuggestion(candidate))return;
+        const key=workKey(candidate);
+        if(textCandidates.size<3&&!textCandidates.has(key)&&supportsTextOnlyReview(candidate,lines))textCandidates.set(key,candidate);
+        if(unique.size>=12)return;
         // Keep most of the bounded image budget available for independent title+author evidence.
         if(!partial&&authorOnlyComparisons>=3)return;
         if(!partial)authorOnlyComparisons++;

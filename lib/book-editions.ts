@@ -71,6 +71,8 @@ export async function saveEdition(db: Database, bookId: number, input: EditionIn
 
 /** Catalog evidence is retained as proposals; verified fields and physical ISBN are untouched. */
 export async function storeEditionCandidates(db: Database, bookId: number, candidates: EditionCandidate[]) {
+  // A work-only suggestion is not evidence for an edition, ISBN or primary catalog artwork.
+  candidates=candidates.filter(candidate=>candidate.identityEvidence!=='title-author-only');
   if (!candidates.length) return;
   const [book] = await db.select({ id: books.id }).from(books).where(eq(books.id, bookId)).for("update");
   if (!book) throw new EditionError("This listing was removed.", 409);
