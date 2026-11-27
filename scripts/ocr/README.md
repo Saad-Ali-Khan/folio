@@ -1,6 +1,16 @@
 # Local OCR trial
 
+## Experimental contrast and multiline review
+
+Adopted November 27 as a local review-only fallback: existing suggestions return first; only no-proposal/mobile-enabled cases can run one contrast detection. A six-second additional budget includes health, preprocessing, inference and remaining catalog time. Busy/offline/timeout cases preserve manual correction/barcode review. The helper now lives in lib/contrast-review.ts and this directory re-exports it for benchmark reproducibility. Live automatic identification and stock/ISBN rules are unchanged. Read-only saved-photo checks confirm Catcher review and preserved Kafka suggestions; a fresh Discord acceptance check is separate. Run `npx tsx scripts/test-cover-review.ts` for ordering, deadline and concurrency regressions. Historical experimental results below explain why this is an additional stage, not a replacement.
+
+Run `npx tsx scripts/ocr/contrast-benchmark.ts` with the local worker ready and the validated 28-photo corpus present. It validates input hashes, performs fresh same-size RGB/green detections on every photo and evaluates exact work evidence and review proposals. Then run `npx tsx scripts/ocr/contrast-policy-check.ts` to compare existing review proposals with a fallback-only selection using the saved experiment. These scripts use read-only catalogs and no database/import/Discord operations. Reports stay private under .folio-ocr; they do not activate a bot policy.
+
+The November 27 trial preserved six existing review cases and added vintage Catcher only when existing suggestions were tried first. Mixing all extra OCR into existing searches lost Kafka's proposal; do not replace that search input wholesale. Two covers remain unresolved. Nineteen earlier automatic paths were preserved by stage ordering, not freshly measured. Additional green preprocessing/inference median was 1409 ms; catalog and startup time are separate. Run `npx tsx scripts/test-contrast-review.ts` for experimental geometry/negative-evidence checks. The helper remains under scripts/ocr and is not used by the live bot.
+
 ## Enable the tested local policy
+
+The managed worker allows up to 180 seconds for model initialization, separately from its 27-second per-scan bridge timeout and 25-second Python watchdog. Model loading keeps the bridge heartbeat alive while readiness remains false; Tesseract remains available during warm-up. Logs distinguish startup timeouts, inference timeouts and unexpected process exits, and record successful model-load duration. Run `npx tsx scripts/test-ocr-worker-lifecycle.ts` for the simulated lifecycle regression without WSL or inventory access.
 
 Activation waits for the previous supervisor to finish shutting down before starting its replacement. A refused stale control endpoint is recoverable only when the recorded owner is provably dead; live or inaccessible owners are preserved. A preflight PASS followed by a startup-control error does not mean the models failed and does not confirm that mobile mode is active. Rerun `ocr:enable` after resolving that specific startup error; wait for the final managed-worker PASS line.
 

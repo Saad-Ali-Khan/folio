@@ -18,7 +18,7 @@ import { lookupPublisherCover } from "@/lib/publisher-cover";
 import { PhotoImportError, storeImportPhoto } from "@/lib/import-photo";
 import { queueCoverBarcode, retainFailedCover } from "@/lib/pending-covers";
 import { notifyCoverCleanup } from "@/lib/notify-cover-cleanup";
-import {suggestCoverCandidates} from "@/lib/cover-suggestions";
+import {findCoverReviewSuggestions} from "@/lib/cover-review";
 import {queueSuggestedCover} from "@/lib/suggested-cover";
 import type {CoverLine} from "@/lib/cover-ocr";
 
@@ -59,7 +59,7 @@ async function retainCover(image: Buffer, messageId: string, channelId: string, 
     if(result.manualCoverId && lines) {
       // Catalog outages/timeouts leave the existing barcode/manual fallback usable.
       try {
-        const candidates=await suggestCoverCandidates(image,lines);
+        const candidates=await findCoverReviewSuggestions(image,lines,process.env.FOLIO_OCR_ENGINE==="paddle");
         const suggested=candidates.length?await queueSuggestedCover(await getDb(),result.manualCoverId,userId,channelId,candidates):null;
         if(suggested)return Response.json(suggested);
       } catch { /* A proposal failure must not discard the retained cover. */ }

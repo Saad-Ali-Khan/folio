@@ -1,7 +1,7 @@
 import { createServer } from "node:http";
 import { randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync, unlinkSync } from "node:fs";
-import { spawn, execFileSync } from "node:child_process";
+import { spawn, execFileSync, type ChildProcessWithoutNullStreams } from "node:child_process";
 import path from "node:path";
 import { acquireLock, createLog, logStream } from "../local-runtime";
 import type { OcrResult } from "../../lib/local-ocr-client";
@@ -67,7 +67,19 @@ function createBackend(root: string, fatal: () => void): Backend {
   const child = process.platform === "win32"
     ? spawn("wsl.exe", ["--exec", "bash", `${linuxRoot}/scripts/ocr/run-worker.sh`, linuxRoot], { windowsHide: true, stdio: ["pipe", "pipe", "pipe"] })
     : spawn("bash", [path.join(root, "scripts/ocr/run-worker.sh"), root], { stdio: ["pipe", "pipe", "pipe"] });
+  return connectOcrWorker(child, log, fatal);
+}
+
+// Cached models on the Windows-mounted WSL filesystem can take over 90 seconds
+// to load. Keep this separate from the much shorter inference watchdog.
+export const OCR_STARTUP_TIMEOUT_MS = 180_000;
+export function connectOcrWorker(child: ChildProcessWithoutNullStreams, log: (line: string) => void, fatal: () => void): Backend {
   logStream(child.stderr, log);
+  const startedAt = Date.now();
+  const fail = (reason: string) => {
+    if (stopping) return;
+    log(reason); backend.stop(); fatal();
+  };
   let active: { id: string; resolve(value: OcrResult): void; reject(error: Error): void; timer: ReturnType<typeof setTimeout> } | undefined;
   let buffer = "", stopping = false;
   const backend: Backend = {
@@ -76,37 +88,40 @@ function createBackend(root: string, fatal: () => void): Backend {
       if (!backend.ready || active) return Promise.reject(Error("OCR worker unavailable"));
       return new Promise((resolve, reject) => {
         const id = randomUUID();
-        const timer = setTimeout(() => { backend.stop(); reject(Error("OCR worker timed out")); fatal(); }, 27_000);
+        const timer = setTimeout(() => { fail("OCR inference timed out after 27000ms."); }, 27_000);
         active = { id, resolve, reject, timer };
         child.stdin.write(JSON.stringify({ id, mode, image: image.toString("base64") }) + "\n");
       });
     },
     stop() {
+      if (stopping) return;
       stopping = true; backend.ready = false;
+      clearTimeout(startup);
       if (active) { clearTimeout(active.timer); active.reject(Error("OCR worker stopped")); active = undefined; }
       child.stdin.end();
       const timer = setTimeout(() => child.kill(), 2000); timer.unref();
     },
   };
-  const startup = setTimeout(() => { backend.stop(); fatal(); }, 90_000);
+  const startup = setTimeout(() => { fail(`OCR model startup timed out after ${OCR_STARTUP_TIMEOUT_MS}ms; cached model loading did not finish.`); }, OCR_STARTUP_TIMEOUT_MS);
   child.stdout.on("data", chunk => {
+    if (stopping) return;
     buffer += chunk.toString();
-    if (buffer.length > 1024 * 1024) { backend.stop(); fatal(); return; }
+    if (buffer.length > 1024 * 1024) { fail("OCR protocol output exceeded its size limit."); return; }
     while (buffer.includes("\n")) {
       const index = buffer.indexOf("\n"), line = buffer.slice(0, index); buffer = buffer.slice(index + 1);
       let message;
       try { message = JSON.parse(line); } catch { continue; } // Library diagnostics never become protocol results.
       if (message.type === "ready" && message.protocol === 1 && message.engine === "paddle-mobile") {
-        clearTimeout(startup); backend.ready = true; backend.modelLoads = message.modelLoads; log("Mobile OCR ready; models retained in memory.");
+        clearTimeout(startup); backend.ready = true; backend.modelLoads = message.modelLoads; log(`Mobile OCR ready after ${Date.now() - startedAt}ms; models retained in memory.`);
       } else if (active && message.id === active.id) {
         const job = active; active = undefined; clearTimeout(job.timer);
         if (message.error) job.reject(Error("Local OCR inference failed")); else job.resolve(message.result);
       }
     }
   });
-  child.on("error", () => { backend.stop(); fatal(); });
-  child.on("exit", () => { clearTimeout(startup); backend.ready = false; if (!stopping) { backend.stop(); fatal(); } });
-  child.stdin.on("error", () => { if (!stopping) { backend.stop(); fatal(); } });
+  child.on("error", () => { fail("OCR worker process could not start."); });
+  child.on("exit", (code, signal) => { fail(`OCR worker exited before shutdown (code=${code}, signal=${signal}).`); });
+  child.stdin.on("error", () => { fail("OCR worker input pipe failed."); });
   return backend;
 }
 

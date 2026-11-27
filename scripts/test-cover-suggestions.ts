@@ -154,6 +154,35 @@ async function main(){
     assert.equal((await db.select().from(schema.bookEditions).where(eq(schema.bookEditions.bookId,textDraft.id))).length,0,'work-only data never becomes an edition/artwork proposal');
     assert.equal((await db.select().from(schema.bookPhotos).where(eq(schema.bookPhotos.bookId,textDraft.id))).length,1,'uploaded photo retained');
     assert.equal(finalBooks.find(row=>row.id===original.id)!.stock,7,'same-title existing listing not restocked');
+    // Enter review directly with controlled OCR/catalog evidence: a normal upload
+    // may be identified earlier and import stock before this fallback is reached.
+    const fahrenheitReview=await suggestCoverCandidates(Buffer.from('test'),stacked,{
+      ...deps,search:async()=>[{...fahrenheit,identity:'work:/works/OL103123W',source:'https://openlibrary.org/works/OL103123W',
+        coverUrl:'https://covers.openlibrary.org/b/id/123-L.jpg?default=false'}],
+      compare:async()=>({gray:.5,color:.5,score:.5}),
+    });
+    assert.equal(fahrenheitReview[0].identityEvidence,'title-author-only');
+    const beforePreview=await db.select().from(schema.books);
+    const beforeAudit=await db.select().from(schema.stockMovements);
+    const saved=await retainFailedCover(db,'fahrenheit-review-only','channel','owner',image,1,store);
+    const offer=await queueSuggestedCover(db,saved.manualCoverId!,'owner','channel',fahrenheitReview);
+    const reviewId=offer!.coverSuggestions![0].id;
+    assert.match(catalogSuggestionUi(offer!).embeds[0].description,/Catalog artwork not matched/);
+    const previewRequest=new Request('http://localhost/api/discord/inventory',{method:'POST',
+      headers:{'content-type':'application/json','x-inventory-secret':'test-secret'},
+      body:JSON.stringify({messageId:'fahrenheit-preview',channelId:'channel',userId:'owner',suggestionChoice:{id:reviewId}})});
+    const previewResponse=await POST(previewRequest);assert.equal(previewResponse.status,200);
+    const fahrenheitPreview=await previewResponse.json();
+    assert(fahrenheitPreview.manualDraftChoice);assert(fahrenheitPreview.suggestedCatalog.artworkUnmatched);
+    assert.match(fahrenheitPreview.reply,/Fahrenheit 451/);
+    assert.match(catalogSuggestionUi(fahrenheitPreview).embeds[0].title,/Example catalog cover \(unmatched\)/);
+    assert.deepEqual(await db.select().from(schema.books),beforePreview,'preview cannot add copies');
+    await resolveCoverBarcode(db,reviewId,'channel','owner','CANCEL',store);
+    const afterCancel=await resolveCoverBarcode(db,reviewId,'channel','owner',saved.manualCoverId!,store);
+    assert.match(afterCancel.reply,/Cancelled\. Stock unchanged/);
+    assert.deepEqual(await db.select().from(schema.books),beforePreview,'cancel and stale confirmation preserve every listing');
+    assert.deepEqual(await db.select().from(schema.stockMovements),beforeAudit,'preview/cancel creates no stock movements');
+    console.log('PASS Fahrenheit review-only API preview, unmatched-artwork warning, cancellation and stale-confirmation rejection; all listing and stock-audit rows unchanged. Isolated database, network disabled.');
     console.log("PASS owner/channel/API authorization, explicit two-step preview/confirm, replay/concurrency, expiry/edit invalidation, separate draft and unlinked ISBN; existing stock unchanged. No real messages or inventory touched.");
   }finally{globals.folioDb=previousDb;globalThis.fetch=previousFetch;keys.forEach((key,i)=>{if(previous[i]===undefined)delete process.env[key];else process.env[key]=previous[i];});await engine.close();}
 }

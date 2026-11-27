@@ -107,10 +107,10 @@ function trustedSuggestion(candidate:CoverCandidate) {
     /^https:\/\/covers\.openlibrary\.org\/b\/id\/[1-9]\d*-L\.jpg\?default=false$/.test(candidate.coverUrl)&&/^https:\/\/openlibrary\.org\/works\/OL\d+W$/.test(candidate.source);
 }
 const defaults: Dependencies = { search: (title,signal) => readingsCovers({title},signal), discover:discoverPartialWorks,read: readCatalogCover, compare: coverDistance };
-export async function suggestCoverCandidates(image: Buffer, lines: CoverLine[], deps: Dependencies = defaults): Promise<EditionCandidate[]> {
+export async function suggestCoverCandidates(image: Buffer, lines: CoverLine[], deps: Dependencies = defaults, budgetMs?:number): Promise<EditionCandidate[]> {
   const queries = partialCoverQueries(lines);
   if (!queries.length) return [];
-  const deadlineMs=Math.min(12_000,Math.max(10,deps.deadlineMs??12_000));
+  const deadlineMs=Math.min(12_000,Math.max(10,budgetMs??deps.deadlineMs??12_000));
   const signal = AbortSignal.timeout(deadlineMs);
   // Race the full job too: an unresponsive dependency cannot delay the retained-cover response forever.
   let timer: ReturnType<typeof setTimeout> | undefined;
