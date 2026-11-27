@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import {formatPrice} from '../lib/format';
+assert.match(formatPrice(300025),/3,000\.25/);
+assert.match(formatPrice(24975),/249\.75/);
+assert.match(formatPrice(1),/0\.01/);
+assert.match(formatPrice(10),/0\.10/);
+assert.match(formatPrice(325000),/3,250(?!\.)/);
+assert.match(formatPrice(300025,'pkr'),/3,000\.25/);
+assert.match(formatPrice(1234,'USD'),/12\.34/);
+console.log('PASS exact PKR paisa, whole rupees, lowercase currency and unchanged USD precision.');

@@ -64,6 +64,8 @@ async function main(){
     const saved=await getOrder();assert.equal(saved.remittedCents,300025);assert.equal(saved.remittanceReference,"statement-test-1");
     const markup=renderToStaticMarkup(<CodCashPanel order={saved} busy={false} onRecord={()=>{}}/>);
     assert(markup.includes("statement-test-1"));assert(markup.includes("Difference from customer payment"));assert(!markup.includes("<form"));assert.equal(cashStatus(saved),"Payout received by Folio");
+    assert.match(markup,/3,000\.25/,"saved net payout must show its exact paisa amount");
+    assert.match(markup,/249\.75/,"customer/payout difference must not be rounded");
     const zero=await make();await post({...snapshot(zero),action:"collected",amount:"3250"});const zeroPaid=await read(zero.id);
     assert.equal((await post({...snapshot(zeroPaid),action:"remitted",amount:"0",reference:"zero-net-statement"})).status,200);
     assert.equal((await read(zero.id)).remittedCents,0);
